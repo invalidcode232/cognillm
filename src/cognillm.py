@@ -81,7 +81,14 @@ class CogniLLM:
             logger.error(f"Error parsing response: {response}")
             raise json.JSONDecodeError(f"Error parsing response: {response}")
 
-        fields = ["automatic_thoughts", "emotions", "behaviors", "openness", "message"]
+        fields = [
+            "automatic_thoughts",
+            "emotions",
+            "behaviors",
+            "openness",
+            "message",
+            "chain_of_thought",
+        ]
 
         for field in fields:
             if field not in response:
@@ -163,6 +170,32 @@ class CogniLLM:
 
         logger.info(f"AI Client initialized successfully: {self.ai_client}")
 
+    def _clean_response(self) -> None:
+        """
+        Removes chain_of_thought from the response and overrides the history of the AI client with the filtered response.
+        Used to minimize context length of the chat history.
+
+        Args:
+            None
+
+        Returns:
+            None
+
+        Example:
+            >>> original_response = CogniLLM.send_message("Hello, how are you?")
+            >>> CogniLLM._clean_response()
+            >>> return original_response # We will return the full response to the user, but clean it up on the backend.
+        """
+        last_message = self.ai_client.get_history_index(-1)
+        if "content" in last_message:
+            last_message_data = json.loads(last_message["content"])
+            last_message_data.pop("chain_of_thought", None)
+            last_message["content"] = json.dumps(last_message_data)
+        else:
+            logger.warning(
+                "Last message is not a dictionary, skipping clean up... (last_message might be of unexpected value)"
+            )
+
     def send_message(self, user_message: str) -> tuple[dict[str, str], int]:
         """
         Send a message to the AI client,
@@ -185,6 +218,8 @@ class CogniLLM:
         """
         prompt: str = self.prompt_manager.get_prompt(user_message)
         response, tokens_used = self.ai_client.send_message(prompt)
+
+        self._clean_response()
 
         # Validates and parses the response
         return self._parse_response(response), tokens_used
