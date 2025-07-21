@@ -1,0 +1,12 @@
+[project]
+name = "cognillm"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "black>=25.1.0",
+    "openai>=1.97.0",
+    "python-dotenv>=1.1.1",
+    "pyyaml>=6.0.2",
+]

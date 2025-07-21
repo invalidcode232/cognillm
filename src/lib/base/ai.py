@@ -136,7 +136,6 @@ class Client:
         # Store the original system prompt for reset functionality
         self.original_system_prompt = system_prompt
 
-
         self.chat_prompt: list[ChatCompletionMessageParam] = [
             {
                 "role": "system",
@@ -206,7 +205,9 @@ class Client:
         )
 
         # Return the AI's response content
-        return completion.choices[0].message.content, completion.usage.total_tokens if completion.usage else None
+        return completion.choices[0].message.content, (
+            completion.usage.total_tokens if completion.usage else None
+        )
 
     def add_message_to_history(self, message: str) -> None:
         """

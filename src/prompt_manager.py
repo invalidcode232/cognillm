@@ -1,36 +1,54 @@
 import os
+import json
+
+PROMPT_PATH = os.path.join(
+    os.path.dirname(__file__), "include", "prompts", "cognillm.txt"
+)
 
 
 class PromptManager:
     def __init__(
-        self,
-        brain_prompt_name: str,
-        messagegen_prompt_name: str,
-        cognitive_model: str,
-        profile_name: str,
-    ):
-        brain_prompt_path = os.path.join(
-            os.path.dirname(__file__), "include", "prompts", f"{brain_prompt_name}"
+        self, profile_name: str, profile_cognitive_model: dict[str, str]
+    ) -> str:
+        """
+        Retrieves the main CogniLLM prompt and replaces dynamic variables with the provided values.
+
+        Args:
+            profile_name (str): The name of the character/profile being roleplayed.
+            profile_cognitive_model (dict[str, str]): The cognitive model of the profile.
+        """
+        with open(PROMPT_PATH, "r") as file:
+            contents = file.read()
+
+        self.base_prompt: str = contents.replace("%name%", profile_name).replace(
+            "%profile%", json.dumps(profile_cognitive_model)
         )
-        messagegen_prompt_path = os.path.join(
-            os.path.dirname(__file__),
-            "include",
-            "prompts",
-            f"{messagegen_prompt_name}",
-        )
 
-        with open(brain_prompt_path, "r") as file:
-            self.brain_prompt = (
-                file.read()
-                .replace("%name%", profile_name)
-                .replace("%cognitive_model%", cognitive_model)
-            )
+    def get_base_prompt(self) -> str:
+        """
+        Gets the baseline prompt with the dynamic variables replaced.
 
-        with open(messagegen_prompt_path, "r") as file:
-            self.messagegen_prompt = file.read().replace("%name%", profile_name)
+        Returns:
+            str: The formatted prompt with dynamic variables replaced.
 
-    def get_brain_prompt(self):
-        return self.brain_prompt
+        Example:
+            >>> prompt = PromptManager.get_prompt()
+            >>> print(prompt)
+        """
+        return self.base_prompt
 
-    def get_textgen_prompt(self):
-        return self.messagegen_prompt
+    def get_prompt(self, user_message: str) -> str:
+        """
+        Returns the prompt to respond to the user's message for every conversation.
+
+        Args:
+            user_message (str): The message from the user.
+
+        Returns:
+            str: The formatted prompt with the user message added.
+
+        Example:
+            >>> prompt = PromptManager.get_prompt("Hello!")
+            >>> print(prompt)
+        """
+        return user_message
