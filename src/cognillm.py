@@ -18,7 +18,6 @@ class CogniLLM:
         brain_client (Client): LLM instance responsible for generating thoughts and emotions
         text_generator_client (Client): LLM instance responsible for generating responses
         profile_name (str): The character description/persona being roleplayed
-
     """
 
     def __init__(
