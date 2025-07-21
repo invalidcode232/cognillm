@@ -187,7 +187,13 @@ class CogniLLM:
             >>> return original_response # We will return the full response to the user, but clean it up on the backend.
         """
         last_message = self.ai_client.get_history_index(-1)
-        if "content" in last_message:
+        if "content" in last_message and "role" in last_message:
+            if last_message["role"] != "assistant":
+                logger.warning(
+                    "Last message is not an assistant message, skipping clean up... (last_message might be of unexpected value)"
+                )
+                return
+
             last_message_data = json.loads(last_message["content"])
             last_message_data.pop("chain_of_thought", None)
             last_message["content"] = json.dumps(last_message_data)
@@ -216,9 +222,11 @@ class CogniLLM:
             >>> response = CogniLLM.send_message("Hello, how are you?")
             >>> print(response)
         """
-        prompt: str = self.prompt_manager.get_prompt(user_message)
+        prompt = self.prompt_manager.get_prompt(user_message)
         response, tokens_used = self.ai_client.send_message(prompt)
 
+        # Clean up the response to minimize context length;
+        # right now, it simply removes the chain_of_thought from the response.
         self._clean_response()
 
         # Validates and parses the response
@@ -228,8 +236,15 @@ class CogniLLM:
         """
         Get the conversation history.
 
+        Args:
+            None
+
         Returns:
             list[ChatCompletionMessageParam]: The conversation history.
+
+        Example:
+            >>> history = CogniLLM.get_conversation_history()
+            >>> print(history)
         """
 
         return self.ai_client.get_history()
@@ -237,5 +252,15 @@ class CogniLLM:
     def reset_conversation(self) -> None:
         """
         Reset the conversation history.
+
+        Args:
+            None
+
+        Returns:
+            None
+
+        Example:
+            >>> CogniLLM.reset_conversation()
+            >>> print(CogniLLM.get_conversation_history())
         """
         self.ai_client.reset_conversation()
