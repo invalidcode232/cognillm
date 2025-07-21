@@ -75,9 +75,6 @@ class CogniLLM:
         Returns:
             dict[str, str]: The parsed response.
         """
-        print("=" * 40)
-        print(response)
-        print("=" * 40)
         try:
             response: dict[str, str] = json.loads(response)
         except json.JSONDecodeError:
