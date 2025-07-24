@@ -10,6 +10,7 @@ from .prompt_manager import PromptManager
 logger = logging.getLogger(__name__)
 
 
+# AI completion parameter configuration
 MAX_TOKENS: int = 1000
 TEMPERATURE: float = 0.5
 

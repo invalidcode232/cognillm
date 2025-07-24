@@ -1,6 +1,7 @@
 import os
 import json
 
+# Path to prompt we use to establish the base AI logic
 PROMPT_PATH = os.path.join(
     os.path.dirname(__file__), "include", "prompts", "cognillm.txt"
 )
