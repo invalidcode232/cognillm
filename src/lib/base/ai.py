@@ -245,7 +245,13 @@ class Client:
         Get the index of the last client message in the conversation history.
         """
 
-        return self.chat_prompt[index]
+        try:
+            return self.chat_prompt[index]
+        except IndexError:
+            raise IndexError(f"No message at index {index}")
 
-    def get_history(self):
+    def get_history(self) -> list[ChatCompletionMessageParam]:
+        """
+        Get the conversation history.
+        """
         return self.chat_prompt

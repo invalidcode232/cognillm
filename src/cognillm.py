@@ -1,17 +1,16 @@
 from openai.types.chat.chat_completion_message_param import ChatCompletionMessageParam
 import json
-import logging
 
 from .lib.base.ai import Client
 from .prompt_manager import PromptManager
+from .logger_config import setup_logger
 
 
-logger = logging.getLogger(__name__)
-
-
-# AI completion parameter configuration
+# Configuration constants
 MAX_TOKENS: int = 1000
 TEMPERATURE: float = 0.5
+
+logger = setup_logger()
 
 
 class CogniLLM:
@@ -48,7 +47,9 @@ class CogniLLM:
 
         for field in fields:
             if field not in response:
-                logger.warning(f"Response is missing required field: {field}")
+                raise ValueError(
+                    f"Text generator LLM response is missing required field: {field}"
+                )
 
         return response
 
@@ -78,13 +79,13 @@ class CogniLLM:
         """
         self.history: list[ChatCompletionMessageParam] | None = history
 
-        # Generate the prompt for AI Client
+        # Initialize PromptManager
         self.prompt_manager: PromptManager = PromptManager(
             profile_path=profile_path,
         )
         self.base_prompt: str = self.prompt_manager.get_base_prompt()
 
-        logger.info(f"Prompt generated successfully: {self.base_prompt}")
+        logger.debug("Base prompt retrieved successfully")
 
         # Initialize the AI Client
         self.ai_client: Client = Client(
@@ -98,7 +99,7 @@ class CogniLLM:
             history=history,
         )
 
-        logger.info(f"AI Client initialized successfully: {self.ai_client}")
+        logger.info(f"Initialized <CogniLLM> successfully")
 
     def _clean_response(self) -> None:
         """
@@ -119,16 +120,15 @@ class CogniLLM:
         last_message = self.ai_client.get_history_index(-1)
         if "content" in last_message and "role" in last_message:
             if last_message["role"] != "assistant":
-                logger.warning(
+                raise ValueError(
                     "Last message is not an assistant message, skipping clean up... (last_message might be of unexpected value)"
                 )
-                return
 
             last_message_data = json.loads(last_message["content"])
             last_message_data.pop("chain_of_thought", None)
             last_message["content"] = json.dumps(last_message_data)
         else:
-            logger.warning(
+            raise ValueError(
                 "Last message is not a dictionary, skipping clean up... (last_message might be of unexpected value)"
             )
 
@@ -160,7 +160,12 @@ class CogniLLM:
         self._clean_response()
 
         # Validates and parses the response
-        return self._parse_response(response), tokens_used
+        parsed_response = self._parse_response(response)
+        logger.debug(f"Parsed response:\n{json.dumps(parsed_response, indent=2)}")
+        logger.debug(f"Tokens used: {tokens_used}")
+        logger.debug("=" * 40)
+
+        return parsed_response.get("message"), tokens_used
 
     def get_conversation_history(self) -> list[ChatCompletionMessageParam]:
         """

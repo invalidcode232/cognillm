@@ -1,4 +1,6 @@
+import logging
 from .types import Stage, EvaluationConfig, EvaluationMethods
+from .evaluators import Evaluator
 
 
 class StageManager:
@@ -15,6 +17,11 @@ class StageManager:
 
     def __init__(
         self,
+        endpoint: str,
+        deployment: str,
+        api_key: str,
+        api_version: str,
+        logger: logging.Logger,
         stage_config: dict[Stage, EvaluationConfig],
         initial_stage: Stage = Stage.PRE_CONTEMPLATION,
         message_index: int = 0,
@@ -23,13 +30,31 @@ class StageManager:
         Initializes the stage manager.
 
         Args:
+            endpoint (str): The endpoint of the AI client.
+            deployment (str): The deployment of the AI client.
+            api_key (str): The API key of the AI client.
+            api_version (str): The API version of the AI client.
+            logger (logging.Logger): The logger to use for logging.
             stage_config (dict[Stage, EvaluationConfig]): The stage config mapping stages to their evaluation configurations.
             initial_stage (Stage): The initial stage.
+            message_index (int): The index of the first message, defaults to 0.
         """
 
         self.stage_config = stage_config
         self.current_stage = initial_stage
         self.current_message_index = message_index
+        self.logger = logger
+
+        # Used for checking if stage should be advanced
+        self.evaluator = Evaluator(
+            endpoint=endpoint,
+            deployment=deployment,
+            api_key=api_key,
+            api_version=api_version,
+            logger=logger,
+        )
+
+        # Stage tracking
         self.stage_history = {
             initial_stage: {
                 "start": self.current_message_index,
@@ -37,6 +62,33 @@ class StageManager:
                 "messages": [],
             }
         }
+
+        self.logger.info(
+            f"Initialized <StageManager> with {len(self.stage_config)} stages, starting at {initial_stage}, message index {message_index}"
+        )
+
+    def handle_message_add(self, message: str) -> None:
+        """
+        Handles the addition of a message to the current stage.
+
+        Args:
+            message (str): The message to add to the current stage.
+        """
+        # Add the message to the stage history
+        self.stage_history[self.current_stage]["messages"].append(message)
+        self.current_message_index += 1
+
+        # Evaluate the stage and advance the stage if the objective is completed
+        result = self.evaluate_stage()
+        if result is None:
+            self.logger.error(
+                f"[StageManager] Invalid response from <Evaluator> for stage {self.current_stage}"
+            )
+        elif result is True:
+            self.logger.info(
+                f"Stage {self.current_stage} completed, advancing to {self.current_stage.next_stage()}"
+            )
+            self.advance_stage()
 
     def advance_stage(self) -> bool:
         """
@@ -72,22 +124,36 @@ class StageManager:
 
         # Update current stage
         self.current_stage = next_stage
+
         return True
 
-    def add_message(self, message: str) -> None:
+    def evaluate_stage(self) -> bool | None:
         """
-        Adds a message to the current stage and increments the message index.
+        Evaluates the current stage and advances the stage if the objective is completed.
 
-        Args:
-            message (str): The message to add to the current stage.
+        Returns:
+            bool | None: True if the stage was advanced, False otherwise, will return None if the response is invalid.
         """
-        self.stage_history[self.current_stage]["messages"].append(message)
-        self.current_message_index += 1
 
-    def evaluate_stage(self) -> bool:
-        """
-        Evaluates the current stage.
-        """
+        # Get the evaluation config for the current stage
+        evaluation_config = self.stage_config[self.current_stage]
+        result = None
+        if evaluation_config.method == EvaluationMethods.OBJECTIVE_COMPLETION:
+            result = self.evaluator.evaluate_objective_completion(
+                evaluation_config.data,
+                self.stage_history[self.current_stage]["messages"],
+            )
+        elif evaluation_config.method == EvaluationMethods.TABLE_COMPARISON:
+            result = self.evaluator.evaluate_table_comparison(
+                evaluation_config.data,
+                self.stage_history[self.current_stage]["messages"],
+            )
+        else:
+            raise ValueError(
+                f"Invalid/unsupported evaluation method: {evaluation_config.method}"
+            )
+
+        return result
 
     # def increment_message_index(self) -> None:
     #     """
