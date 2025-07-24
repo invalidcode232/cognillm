@@ -1,6 +1,5 @@
 from openai.types.chat.chat_completion_message_param import ChatCompletionMessageParam
 import json
-import yaml
 import logging
 
 from .lib.base.ai import Client
