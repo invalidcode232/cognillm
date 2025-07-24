@@ -1,0 +1,12 @@
+stages:
+  stage_1:
+    type: "complete_objectives"
+    objectives:
+      - "Convince Madam Chan that her current situation is not good for her children"
+      - "Convince Madam Chan that her husband can not provide for her children"
+  stage_2:
+    type: "table_comparison"
+    default_table:
+      costs:
+        - "Madam Chan must be able to provide for her children"
+      rewards: null

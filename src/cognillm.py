@@ -29,43 +29,6 @@ class CogniLLM:
     """
 
     @staticmethod
-    def _validate_profile(profile: dict[str, str]) -> None:
-        """
-        Validate the profile dictionary.
-
-        Args:
-            profile (dict[str, str]): The profile dictionary
-
-        Raises:
-            ValueError: If the profile is missing a required key or the cognitive model is not a dictionary
-        """
-        required_keys = ["name", "goal", "short_description", "cognitive_model"]
-
-        # Check if the profile has the required keys
-        for key in required_keys:
-            if key not in profile:
-                logger.error(f"Profile is missing required key: {key}")
-                raise ValueError(f"Profile is missing required key: {key}")
-
-        # Check if the cognitive model is a dictionary
-        if not isinstance(profile["cognitive_model"], dict):
-            logger.error("Cognitive model is not a dictionary")
-            raise ValueError("Cognitive model is not a dictionary")
-
-        # Check if the cognitive model has the required keys
-        required_cm_keys = [
-            "core_beliefs",
-            "intermediate_beliefs",
-            "coping_strategies",
-            "situation",
-        ]
-
-        for key in required_cm_keys:
-            if key not in profile["cognitive_model"]:
-                logger.error(f"Cognitive model is missing required key: {key}")
-                raise ValueError(f"Cognitive model is missing required key: {key}")
-
-    @staticmethod
     def _parse_response(response: str) -> dict[str, str]:
         """
         Parse the response from the AI client.
@@ -93,8 +56,7 @@ class CogniLLM:
 
         for field in fields:
             if field not in response:
-                logger.error(f"Response is missing required field: {field}")
-                raise ValueError(f"Response is missing required field: {field}")
+                logger.warning(f"Response is missing required field: {field}")
 
         return response
 
@@ -124,42 +86,17 @@ class CogniLLM:
         """
         self.history: list[ChatCompletionMessageParam] | None = history
 
-        # Check and load the profile
-        try:
-            logger.info(f"Loading profile from {profile_path}")
-
-            with open(profile_path, "r") as file:
-                profile = yaml.safe_load(file)
-        except FileNotFoundError:
-            logger.error(f"Profile file not found: {profile_path}")
-            raise FileNotFoundError(f"Profile file not found: {profile_path}")
-        except yaml.YAMLError as e:
-            logger.error(f"Error parsing profile file: {e}")
-            raise yaml.YAMLError(f"Error parsing profile file: {e}")
-
-        self._validate_profile(profile)
-
-        # Get the profile attributes
-        self.profile_name: str = profile.get("name")
-        self.profile_goal: str = profile.get("goal")
-        self.profile_short_description: str = profile.get("short_description")
-        self.profile_cognitive_model: dict[str, str] = profile.get("cognitive_model")
-
-        logger.info(f"Profile validated and loaded successfully: {self.profile_name}")
-
         # Generate the prompt for AI Client
         self.prompt_manager: PromptManager = PromptManager(
-            profile_name=self.profile_name,
-            profile_cognitive_model=self.profile_cognitive_model,
+            profile_path=profile_path,
         )
+        self.base_prompt: str = self.prompt_manager.get_base_prompt()
 
-        self.prompt: str = self.prompt_manager.get_base_prompt()
-
-        logger.info(f"Prompt generated successfully: {self.prompt}")
+        logger.info(f"Prompt generated successfully: {self.base_prompt}")
 
         # Initialize the AI Client
         self.ai_client: Client = Client(
-            system_prompt=self.prompt,
+            system_prompt=self.base_prompt,
             endpoint=endpoint,
             deployment=deployment,
             api_key=api_key,
@@ -223,7 +160,7 @@ class CogniLLM:
             >>> response = CogniLLM.send_message("Hello, how are you?")
             >>> print(response)
         """
-        prompt = self.prompt_manager.get_prompt(user_message)
+        prompt = self.prompt_manager.get_message_prompt(user_message)
         response, tokens_used = self.ai_client.send_message(prompt)
 
         # Clean up the response to minimize context length;
