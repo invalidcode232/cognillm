@@ -44,8 +44,7 @@ class PromptManager:
         Retrieves the main CogniLLM prompt and replaces dynamic variables with the provided values.
 
         Args:
-            profile_name (str): The name of the character/profile being roleplayed.
-            profile_cognitive_model (dict[str, str]): The cognitive model of the profile.
+            profile_path (str): The path to the profile directory.
         """
         file_names = ["config.yaml", "profile.yaml"]
 

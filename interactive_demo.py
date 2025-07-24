@@ -28,13 +28,12 @@ def main():
     # Initialize from environment variables
     try:
         cognillm = CogniLLM(
-            profile_path="profiles/MadamChan.yaml",
+            profile_path="profiles/MadamChan",
             endpoint=ENDPOINT,
             deployment=DEPLOYMENT,
             api_key=API_KEY,
             api_version=API_VERSION,
         )
-        print(f"Loaded: {cognillm.profile_name}")
         print("Type 'quit' to exit\n")
 
     except Exception as e:
@@ -53,7 +52,7 @@ def main():
                 continue
 
             response, _ = cognillm.send_message(user_input)
-            print(f"AI: {response['message']}")
+            print(f"AI: {response}")
             print()
 
         except KeyboardInterrupt:

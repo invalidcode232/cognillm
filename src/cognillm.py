@@ -19,13 +19,6 @@ class CogniLLM:
     """
     A roleplaying system that uses a LLM to generate a cognitive model for each response,
     and then uses the cognitive model to generate a response.
-
-    Attributes:
-        profile_name (str): The name of the baseline profile to embody
-        profile_goal (str): The goal of the profile
-        profile_short_description (str): The short description of the profile
-        profile_cognitive_model (dict[str, str]): The cognitive model of the profile
-        history (list[ChatCompletionMessageParam] | None): The history of messages
     """
 
     @staticmethod
