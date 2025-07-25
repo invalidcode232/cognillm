@@ -1,6 +1,8 @@
 from openai.types.chat import ChatCompletionMessageParam
 from openai import AzureOpenAI
+import uuid
 from ..memory.summary import SummaryBasedMemory
+from ...type_manager import History
 
 
 class CompletionConfig:
@@ -213,9 +215,11 @@ class Client:
             start_round = summary_idx * self.summary_window_size + 1
             end_round = (summary_idx + 1) * self.summary_window_size
             
+            # Access the summary content from the Summary dataclass
+            summary_obj = self.summary_memory.summary_list[summary_idx]
             prompt.append({
                 "role": "assistant", 
-                "content": f"Previous conversation summary (rounds {start_round}-{end_round}): {self.summary_memory.summary_list[summary_idx]}"
+                "content": f"Previous conversation summary (rounds {start_round}-{end_round}): {summary_obj.summary}"
             })
         
         # Calculate the starting index for remaining unsummarized history
@@ -229,21 +233,20 @@ class Client:
         
         return prompt
 
-    def send_message(self, message: str) -> tuple[str, int | None]:
+    def send_message(self, message: str) -> History:
         """
-        Send a message to the AI and return the response.
+        Send a message to the AI and return the response as a History object.
 
         This method adds the user's message to the conversation history, sends the
         entire conversation context to the Azure OpenAI API, and returns the AI's
-        response. The conversation history is automatically maintained.
+        response as a History dataclass object.
 
         Args:
             message (str): The user's message to send to the AI.
 
         Returns:
-            tuple[str, int]: A tuple containing:
-                - The AI's response to the message (str)
-                - The total number of tokens used in the completion (int)
+            History: A History dataclass object containing the assistant's response
+                with id, role, content, and token count.
 
         Raises:
             ValueError: If the API returns no completion choices or empty content.
@@ -251,10 +254,10 @@ class Client:
                 problems, or other API errors.
 
         Example:
-            >>> response, tokens = client.send_message("What is machine learning?")
-            >>> print(response)
+            >>> response = client.send_message("What is machine learning?")
+            >>> print(response.content)
             "Machine learning is a subset of artificial intelligence..."
-            >>> print(tokens)
+            >>> print(response.tokens)
             100
         """
         # Add the user's message to the conversation history
@@ -268,11 +271,11 @@ class Client:
         # Prepare the prompt based on summary settings
         prompt = self._prepare_prompt()
 
-        # # Debug
-        # print("=" * 40)
-        # import json
-        # print(f"Prompt:\n {json.dumps(prompt, indent=2)}")
-        # print("=" * 40)
+        # Debug
+        print("=" * 40)
+        import json
+        print(f"Prompt:\n {json.dumps(prompt, indent=2)}")
+        print("=" * 40)
 
         # Send the conversation to Azure OpenAI and get the completion
         completion = self.client.chat.completions.create(
@@ -300,17 +303,29 @@ class Client:
 
         # Update summary in background if enabled
         if self.summary_enabled and self.summary_memory:
+            # Create History objects for the conversation round
+            user_history = History(
+                id=str(uuid.uuid4()),
+                role="user",
+                content=message
+            )
+            assistant_history = History(
+                id=str(uuid.uuid4()),
+                role="assistant", 
+                content=assistant_response
+            )
+            
             # Create a conversation round (pair) for summary
-            conversation_round = [
-                {"role": "user", "content": message},
-                {"role": "assistant", "content": assistant_response}
-            ]
+            conversation_round = [user_history, assistant_history]
             # Update summary 
             self.summary_memory.update(conversation_round)
 
-        # Return the AI's response content immediately
-        return assistant_response, (
-            completion.usage.total_tokens if completion.usage else None
+        # Return the AI's response as a History object
+        return History(
+            id=str(uuid.uuid4()),
+            role="assistant",
+            content=assistant_response,
+            tokens=completion.usage.total_tokens if completion.usage else None
         )
 
     def add_message_to_history(self, message: str) -> None:

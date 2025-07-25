@@ -4,6 +4,7 @@ import logging
 
 from .lib.base.ai import Client
 from .prompt_manager import PromptManager
+from .type_manager import History
 
 
 logger = logging.getLogger(__name__)
@@ -146,7 +147,7 @@ class CogniLLM:
                 "Last message is not a dictionary, skipping clean up... (last_message might be of unexpected value)"
             )
 
-    def send_message(self, user_message: str) -> tuple[dict[str, str], int]:
+    def send_message(self, user_message: str) -> tuple[dict[str, str], History]:
         """
         Send a message to the AI client,
         returns a complex response containing the updated dynamic cognitive model fields and final message output:
@@ -160,21 +161,23 @@ class CogniLLM:
             user_message (str): The message from the user.
 
         Returns:
-            tuple[dict[str, str], int]: The response from the AI Client and the number of tokens used.
+            tuple[dict[str, str], History]: The parsed response from the AI Client and the History object containing response details.
 
         Example:
-            >>> response = CogniLLM.send_message("Hello, how are you?")
+            >>> response, history = CogniLLM.send_message("Hello, how are you?")
             >>> print(response)
+            >>> print(history.content)
+            >>> print(history.tokens)
         """
         prompt = self.prompt_manager.get_message_prompt(user_message)
-        response, tokens_used = self.ai_client.send_message(prompt)
+        response_history = self.ai_client.send_message(prompt)
 
         # Clean up the response to minimize context length;
         # right now, it simply removes the chain_of_thought from the response.
         self._clean_response()
 
         # Validates and parses the response
-        return self._parse_response(response), tokens_used
+        return self._parse_response(response_history.content), response_history
 
     def get_conversation_history(self) -> list[ChatCompletionMessageParam]:
         """

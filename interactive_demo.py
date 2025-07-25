@@ -38,8 +38,8 @@ def main():
             summary_start_round=4,  # Debug: start summarizing after 10 rounds
         )
         print("✓ CogniLLM initialized with summary memory enabled")
-        print("✓ Summary will start after 10 conversation rounds")
-        print("✓ Each summary window contains 3 conversation rounds")
+        print("✓ Summary will start after 4 conversation rounds")
+        print("✓ Each summary window contains 2 conversation rounds")
         print("Type 'quit' to exit, 'info' to see summary status\n")
 
     except Exception as e:
@@ -78,11 +78,12 @@ def main():
             summary_info = cognillm.get_summary_info()
             print(f"📊 Before: {summary_info['total_conversation_rounds']} rounds, {summary_info['summaries_count']} summaries, {summary_info['conversation_rounds_pending']} pending")
 
-            response, tokens = cognillm.send_message(user_input)
+            response, history = cognillm.send_message(user_input)
             
             # Show the AI response
             print(f"AI: {response.get('message', 'No message in response')}")
-            print(f"💭 Tokens used: {tokens}")
+            print(f"💭 Tokens used: {history.tokens}")
+            print(f"🆔 Response ID: {history.id}")
             
             # Show updated summary info after processing
             summary_info = cognillm.get_summary_info()

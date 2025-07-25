@@ -1,7 +1,9 @@
 import json
 import os
 import yaml
+import uuid
 from openai import AzureOpenAI
+from type_manager import Summary, History
 
 PROMPT_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "include", "prompts", "summaryllm.txt")
 
@@ -79,9 +81,10 @@ class SummaryBasedMemory:
         presence_penalty: float = 0,
     ):
         self.window_size: int = summary_window_size
-        self.history_list: list = []
-        self.summary_list: list = []
+        self.history_list: list[History] = []  # Now stores History dataclass instances
+        self.summary_list: list[Summary] = []  # Now stores Summary dataclass instances
         self.system_prompt: str = get_summary_system_prompt(profile_path=profile_path)
+        self.round_count: int = 0
         
         if tool_name != "openai":
             raise ValueError("Currently, only 'openai' is supported as a tool name.")
@@ -101,22 +104,29 @@ class SummaryBasedMemory:
             presence_penalty= presence_penalty,
         )
     
+    def increase_round_count(self):
+        """
+        Increases the round count by 1.
+        This can be used to track the number of conversation rounds.
+        """
+        self.round_count += 1
+
     def summary_signal(self):
         """
         Generates a summary signal based on the current history size as well as the summary window size.
         Returns:
             A boolean indicating whether the summary should be generated.
         """
-        if len(self.history_list) >= self.window_size:
+        if self.round_count >= self.window_size:
             return True
         return False
 
-    def add_to_history(self, history_item):
+    def add_to_history(self, history_item: History):
         """
         Adds an item to the history list and maintains the window size.
         
         Args:
-            history_item: The item to be added to the history.
+            history_item (History): The History dataclass item to be added to the history.
         """
         self.history_list.append(history_item)
     
@@ -124,16 +134,32 @@ class SummaryBasedMemory:
         """
         Clears the history list.
         """
-        self.history_list = []
+        self.history_list: list[History] = []
 
     def add_summary(self):
         """
         Generates a summary of the current history and adds it to the summary list.
         If the summary signal is triggered, it will create a summary using the summary tool.
         """
-        message = json.dumps(self.history_list)
-        prompt =[{"role": "system", "content": self.system_prompt}, {"role": "user", "content": message}]
+        # Get the list of message IDs that will be summarized
+        summarized_message_ids = [item.id for item in self.history_list]
         
+        # Create prompt with system message followed by conversation history in natural order
+        prompt = [{"role": "system", "content": self.system_prompt}]
+        
+        # Add each message in the order they appear, maintaining user-assistant flow
+        for history_item in self.history_list:
+            prompt.append({
+                "role": history_item.role,
+                "content": history_item.content
+            })
+        
+        # Debug
+        print("=" * 40)
+        import json
+        print(f"Prompt for summary:\n {json.dumps(prompt, indent=2)}")
+        print("=" * 40)
+
         response = self.summary_tool.chat.completions.create(
             messages=prompt,
             model=self.completion_config.model,
@@ -145,16 +171,28 @@ class SummaryBasedMemory:
         )
         if not response.choices or not response.choices[0].message.content:
             raise ValueError("No completion choices returned")
-        summary = response.choices[0].message.content.strip()
+        summary_content = response.choices[0].message.content.strip()
     
+        # Create Summary dataclass instance
+        summary = Summary(
+            id=str(uuid.uuid4()),
+            summarized_messages=summarized_message_ids,
+            summary=summary_content
+        )
+        
         self.summary_list.append(summary)
         self._clear_history()
         return summary
     
-    def update(self, history_item):
+    def update(self, history_items: list[History]):
         """
-        Automatically update memory
+        Automatically update memory with a list of History items
+        
+        Args:
+            history_items (list[History]): List of History dataclass items to be added.
         """
-        self.add_to_history(history_item)
+        for history_item in history_items:
+            self.add_to_history(history_item)
+        self.increase_round_count()
         if self.summary_signal():
             self.add_summary()
