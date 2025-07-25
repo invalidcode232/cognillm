@@ -1,5 +1,6 @@
 from openai.types.chat import ChatCompletionMessageParam
 from openai import AzureOpenAI
+from ..memory.summary import SummaryBasedMemory
 
 
 class CompletionConfig:
@@ -65,7 +66,7 @@ class Client:
     Attributes:
         client (AzureOpenAI): The underlying Azure OpenAI client instance.
         completion_config (CompletionConfig): Configuration for completion parameters.
-        chat_prompt (list[ChatCompletionMessageParam]): Conversation history including
+        chat_history (list[ChatCompletionMessageParam]): Conversation history including
             system prompt and all messages exchanged.
 
     Example:
@@ -93,6 +94,11 @@ class Client:
         frequency_penalty: float = 0,
         presence_penalty: float = 0,
         history: list[ChatCompletionMessageParam] | None = None,
+        summary_enabled: bool = True,
+        summary_window_size: int = 5,
+        summary_model: str = "openai",
+        summary_start_round: int = 50,
+        profile_path: str | None = None,
     ):
         """
         Initialize the Azure OpenAI Client.
@@ -111,6 +117,12 @@ class Client:
             top_p (float, optional): Nucleus sampling parameter (0.0-1.0). Defaults to 0.95.
             frequency_penalty (float, optional): Frequency penalty (-2.0 to 2.0). Defaults to 0.
             presence_penalty (float, optional): Presence penalty (-2.0 to 2.0). Defaults to 0.
+            history (list[ChatCompletionMessageParam] | None, optional): Existing conversation history. Defaults to None.
+            summary_enabled (bool, optional): Whether to enable summary-based memory. Defaults to True.
+            summary_window_size (int, optional): Number of rounds per summary window. Defaults to 5.
+            summary_model (str, optional): Model to use for summarization. Defaults to "openai".
+            summary_start_round (int, optional): Round number to start using summaries. Defaults to 50.
+            profile_path (str | None, optional): Path to profile for summary system. Required if summary_enabled is True. Defaults to None.
 
         Raises:
             Exception: If Azure OpenAI client initialization fails due to invalid credentials
@@ -136,7 +148,25 @@ class Client:
         # Store the original system prompt for reset functionality
         self.original_system_prompt = system_prompt
 
-        self.chat_prompt: list[ChatCompletionMessageParam] = [
+        # Store summary configuration
+        self.summary_enabled = summary_enabled
+        self.summary_window_size = summary_window_size
+        self.summary_start_round = summary_start_round
+
+        # Initialize summary memory if enabled and profile_path is provided
+        self.summary_memory: SummaryBasedMemory | None = None
+        if summary_enabled and profile_path:
+            self.summary_memory = SummaryBasedMemory(
+                profile_path=profile_path,
+                summary_window_size=summary_window_size,
+                tool_name=summary_model,
+                endpoint=endpoint,
+                deployment=deployment,
+                api_key=api_key,
+                api_version=api_version,
+            )
+
+        self.chat_history: list[ChatCompletionMessageParam] = [
             {
                 "role": "system",
                 "content": system_prompt,
@@ -144,7 +174,60 @@ class Client:
         ]
 
         if history is not None:
-            self.chat_prompt = history
+            self.chat_history = history
+
+    def _prepare_prompt(self) -> list[ChatCompletionMessageParam]:
+        """
+        Prepare the prompt based on summary settings.
+        
+        Only replaces the earliest conversation windows with summaries,
+        keeping recent conversations in their original form.
+        
+        Returns:
+            list[ChatCompletionMessageParam]: The prepared prompt for the completion.
+        """
+        if not self.summary_enabled or not self.summary_memory:
+            return self.chat_history
+        
+        # Calculate the number of conversation rounds (excluding system message)
+        # Each round = 1 user message + 1 assistant message = 2 messages
+        conversation_rounds = (len(self.chat_history) - 1) // 2
+        
+        # If we haven't reached the start round threshold, use history directly
+        if conversation_rounds < self.summary_start_round:
+            return self.chat_history
+        
+        # Calculate available summaries
+        available_summaries = len(self.summary_memory.summary_list)
+        required_summaries = (conversation_rounds - self.summary_start_round) // self.summary_window_size + 1
+        
+        # If no summaries are available yet, return original history
+        if available_summaries == 0:
+            return self.chat_history
+        
+        # Start building the prompt with system message
+        prompt = [self.chat_history[0]]
+        
+        # Add summaries for the earliest windows only
+        for summary_idx in range(min(available_summaries, required_summaries)):
+            start_round = summary_idx * self.summary_window_size + 1
+            end_round = (summary_idx + 1) * self.summary_window_size
+            
+            prompt.append({
+                "role": "assistant", 
+                "content": f"Previous conversation summary (rounds {start_round}-{end_round}): {self.summary_memory.summary_list[summary_idx]}"
+            })
+        
+        # Calculate the starting index for remaining unsummarized history
+        # Start from: 1 (system) + (available_summaries * summary_window_size * 2) messages
+        summarized_messages = required_summaries * self.summary_window_size * 2
+        remaining_start_index = 1 + summarized_messages
+        
+        # Add all remaining unsummarized conversation history
+        if remaining_start_index < len(self.chat_history):
+            prompt.extend(self.chat_history[remaining_start_index:])
+        
+        return prompt
 
     def send_message(self, message: str) -> tuple[str, int | None]:
         """
@@ -175,17 +258,26 @@ class Client:
             100
         """
         # Add the user's message to the conversation history
-        self.chat_prompt.append(
+        self.chat_history.append(
             {
                 "role": "user",
                 "content": message,
             }
         )
 
+        # Prepare the prompt based on summary settings
+        prompt = self._prepare_prompt()
+
+        # # Debug
+        # print("=" * 40)
+        # import json
+        # print(f"Prompt:\n {json.dumps(prompt, indent=2)}")
+        # print("=" * 40)
+
         # Send the conversation to Azure OpenAI and get the completion
         completion = self.client.chat.completions.create(
             model=self.completion_config.model,
-            messages=self.chat_prompt,
+            messages=prompt,
             max_tokens=self.completion_config.max_tokens,
             temperature=self.completion_config.temperature,
             top_p=self.completion_config.top_p,
@@ -197,15 +289,27 @@ class Client:
         if not completion.choices or not completion.choices[0].message.content:
             raise ValueError("No completion choices returned")
 
-        self.chat_prompt.append(
+        # Add assistant response to history
+        assistant_response = completion.choices[0].message.content
+        self.chat_history.append(
             {
                 "role": "assistant",
-                "content": completion.choices[0].message.content,
+                "content": assistant_response,
             }
         )
 
-        # Return the AI's response content
-        return completion.choices[0].message.content, (
+        # Update summary in background if enabled
+        if self.summary_enabled and self.summary_memory:
+            # Create a conversation round (pair) for summary
+            conversation_round = [
+                {"role": "user", "content": message},
+                {"role": "assistant", "content": assistant_response}
+            ]
+            # Update summary 
+            self.summary_memory.update(conversation_round)
+
+        # Return the AI's response content immediately
+        return assistant_response, (
             completion.usage.total_tokens if completion.usage else None
         )
 
@@ -219,7 +323,7 @@ class Client:
         Args:
             message (str): The message to add to conversation history.
         """
-        self.chat_prompt.append(
+        self.chat_history.append(
             {
                 "role": "user",
                 "content": message,
@@ -233,7 +337,7 @@ class Client:
         This method is useful for benchmarking or when you want to start a fresh
         conversation while reusing the same client instance.
         """
-        self.chat_prompt = [
+        self.chat_history = [
             {
                 "role": "system",
                 "content": self.original_system_prompt,
@@ -245,7 +349,36 @@ class Client:
         Get the index of the last client message in the conversation history.
         """
 
-        return self.chat_prompt[index]
+        return self.chat_history[index]
 
     def get_history(self):
-        return self.chat_prompt
+        return self.chat_history
+
+    def get_summary_info(self) -> dict:
+        """
+        Get information about the summary system state.
+        
+        Returns:
+            dict: Dictionary containing summary system information.
+        """
+        # Calculate current conversation rounds
+        conversation_rounds = (len(self.chat_history) - 1) // 2
+        
+        if not self.summary_memory:
+            return {
+                "summary_enabled": self.summary_enabled,
+                "summary_memory": None,
+                "summaries_count": 0,
+                "conversation_rounds_pending": 0,
+                "total_conversation_rounds": conversation_rounds
+            }
+        
+        return {
+            "summary_enabled": self.summary_enabled,
+            "summary_memory": True,
+            "summaries_count": len(self.summary_memory.summary_list),
+            "conversation_rounds_pending": len(self.summary_memory.history_list),
+            "total_conversation_rounds": conversation_rounds,
+            "window_size": self.summary_window_size,
+            "start_round": self.summary_start_round
+        }

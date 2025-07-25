@@ -33,9 +33,9 @@ class CogniLLM:
         """
         try:
             response: dict[str, str] = json.loads(response)
-        except json.JSONDecodeError:
+        except json.JSONDecodeError as e:
             logger.error(f"Error parsing response: {response}")
-            raise json.JSONDecodeError(f"Error parsing response: {response}")
+            raise e
 
         fields = [
             "automatic_thoughts",
@@ -62,6 +62,10 @@ class CogniLLM:
         history: list[ChatCompletionMessageParam] | None = None,
         temperature: float = TEMPERATURE,
         max_tokens: int = MAX_TOKENS,
+        summary_enabled: bool = True,
+        summary_window_size: int = 5,
+        summary_model: str = "openai",
+        summary_start_round: int = 50,
     ):
         """
         Initialize the CogniLLM roleplaying system.
@@ -75,8 +79,13 @@ class CogniLLM:
             history (list[ChatCompletionMessageParam] | None): The history of messages
             temperature (float): The temperature to use for the AI client
             max_tokens (int): The maximum number of tokens to use for the AI client
+            summary_enabled (bool): Whether to enable summary-based memory
+            summary_window_size (int): Number of rounds per summary window
+            summary_model (str): Model to use for summarization
+            summary_start_round (int): Round number to start using summaries
         """
         self.history: list[ChatCompletionMessageParam] | None = history
+        self.profile_path = profile_path
 
         # Generate the prompt for AI Client
         self.prompt_manager: PromptManager = PromptManager(
@@ -96,6 +105,11 @@ class CogniLLM:
             max_tokens=max_tokens,
             temperature=temperature,
             history=history,
+            summary_enabled=summary_enabled,
+            summary_window_size=summary_window_size,
+            summary_model=summary_model,
+            summary_start_round=summary_start_round,
+            profile_path=profile_path,
         )
 
         logger.info(f"AI Client initialized successfully: {self.ai_client}")
@@ -194,3 +208,12 @@ class CogniLLM:
             >>> print(CogniLLM.get_conversation_history())
         """
         self.ai_client.reset_conversation()
+
+    def get_summary_info(self) -> dict:
+        """
+        Get information about the summary system state.
+        
+        Returns:
+            dict: Dictionary containing summary system information.
+        """
+        return self.ai_client.get_summary_info()
