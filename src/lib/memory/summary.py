@@ -1,9 +1,9 @@
-from base import Client
 import json
 import os
 import yaml
+from openai import AzureOpenAI
 
-PROMPT_PATH = os.path.join(os.path.dirname(__file__), "include", "prompts", "summaryllm.txt")
+PROMPT_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "include", "prompts", "summaryllm.txt")
 
 def get_summary_system_prompt(profile_path: str) -> str:
     """
@@ -28,6 +28,33 @@ def get_summary_system_prompt(profile_path: str) -> str:
         raise ValueError("Profile data is empty")
     return content.strip().replace("%profile%", json.dumps(profile))
     
+class CompletionConfig:
+    def __init__(
+        self,
+        model: str,
+        max_tokens: int,
+        temperature: float,
+        top_p: float,
+        frequency_penalty: float,
+        presence_penalty: float,
+    ):
+        """
+        Initialize the CompletionConfig with the specified parameters.
+
+        Args:
+            model (str): The deployment/model name to use for completions.
+            max_tokens (int): Maximum number of tokens to generate (1-4096).
+            temperature (float): Sampling temperature (0.0-2.0).
+            top_p (float): Nucleus sampling parameter (0.0-1.0).
+            frequency_penalty (float): Frequency penalty (-2.0 to 2.0).
+            presence_penalty (float): Presence penalty (-2.0 to 2.0).
+        """
+        self.model = model
+        self.max_tokens = max_tokens
+        self.temperature = temperature
+        self.top_p = top_p
+        self.frequency_penalty = frequency_penalty
+        self.presence_penalty = presence_penalty
 
 class SummaryBasedMemory:
     """
@@ -47,6 +74,9 @@ class SummaryBasedMemory:
         api_version: str = "",
         max_tokens: int = 10000,
         temperature: float = 0.0,
+        top_p: float = 0.95,
+        frequency_penalty: float = 0,
+        presence_penalty: float = 0,
     ):
         self.window_size: int = summary_window_size
         self.history_list: list = []
@@ -56,14 +86,19 @@ class SummaryBasedMemory:
         if tool_name != "openai":
             raise ValueError("Currently, only 'openai' is supported as a tool name.")
         
-        self.summary_tool: Client = Client(
-            system_prompt=self.system_prompt,
-            endpoint=endpoint,
-            deployment=deployment,
+        self.summary_tool = AzureOpenAI(
+            azure_endpoint=endpoint,
             api_key=api_key,
             api_version=api_version,
+        )
+
+        self.completion_config = CompletionConfig(
+            model=deployment,
             max_tokens=max_tokens,
             temperature=temperature,
+            top_p=top_p,
+            frequency_penalty=frequency_penalty,
+            presence_penalty= presence_penalty,
         )
     
     def summary_signal(self):
@@ -96,8 +131,22 @@ class SummaryBasedMemory:
         Generates a summary of the current history and adds it to the summary list.
         If the summary signal is triggered, it will create a summary using the summary tool.
         """
-        prompt = json.dumps(self.history_list)
-        summary = self.summary_tool.send_message(message=prompt)
+        message = json.dumps(self.history_list)
+        prompt =[{"role": "system", "content": self.system_prompt}, {"role": "user", "content": message}]
+        
+        response = self.summary_tool.chat.completions.create(
+            messages=prompt,
+            model=self.completion_config.model,
+            max_tokens=self.completion_config.max_tokens,
+            temperature=self.completion_config.temperature,
+            top_p=self.completion_config.top_p,
+            frequency_penalty=self.completion_config.frequency_penalty,
+            presence_penalty=self.completion_config.presence_penalty,
+        )
+        if not response.choices or not response.choices[0].message.content:
+            raise ValueError("No completion choices returned")
+        summary = response.choices[0].message.content.strip()
+    
         self.summary_list.append(summary)
         self._clear_history()
         return summary
