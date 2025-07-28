@@ -1,6 +1,6 @@
 from openai.types.chat import ChatCompletionMessageParam
 from openai import AzureOpenAI
-
+from ..memory.summary import SummaryBasedMemory
 
 class CompletionConfig:
     """
@@ -55,17 +55,17 @@ class Client:
     """
     Azure OpenAI Chat Completion Client.
 
-    This client provides a convenient interface for interacting with Azure OpenAI's
+    This client proves a convenient interface for interacting with Azure OpenAI's
     chat completion API. It manages the conversation context, handles authentication,
-    and provides methods for sending messages and receiving responses.
+    and proves methods for sending messages and receiving responses.
 
     The client maintains conversation history automatically and applies the specified
-    system prompt to guide the AI's behavior throughout the conversation.
+    system prompt to gue the AI's behavior throughout the conversation.
 
     Attributes:
         client (AzureOpenAI): The underlying Azure OpenAI client instance.
         completion_config (CompletionConfig): Configuration for completion parameters.
-        chat_prompt (list[ChatCompletionMessageParam]): Conversation history including
+        chat_history (list[ChatCompletionMessageParam]): Conversation history including
             system prompt and all messages exchanged.
 
     Example:
@@ -93,12 +93,17 @@ class Client:
         frequency_penalty: float = 0,
         presence_penalty: float = 0,
         history: list[ChatCompletionMessageParam] | None = None,
+        summary_enabled: bool = True,
+        summary_window_size: int = 5,
+        summary_model: str = "openai",
+        summary_start_round: int = 50,
+        profile_path: str | None = None,
     ):
         """
         Initialize the Azure OpenAI Client.
 
         Sets up the Azure OpenAI client connection, configures completion parameters,
-        and initializes the conversation with the provided system prompt.
+        and initializes the conversation with the proved system prompt.
 
         Args:
             system_prompt (str): The system prompt that defines the AI's role and behavior.
@@ -111,9 +116,15 @@ class Client:
             top_p (float, optional): Nucleus sampling parameter (0.0-1.0). Defaults to 0.95.
             frequency_penalty (float, optional): Frequency penalty (-2.0 to 2.0). Defaults to 0.
             presence_penalty (float, optional): Presence penalty (-2.0 to 2.0). Defaults to 0.
+            history (list[ChatCompletionMessageParam] | None, optional): Existing conversation history. Defaults to None.
+            summary_enabled (bool, optional): Whether to enable summary-based memory. Defaults to True.
+            summary_window_size (int, optional): Number of rounds per summary window. Defaults to 5.
+            summary_model (str, optional): Model to use for summarization. Defaults to "openai".
+            summary_start_round (int, optional): Round number to start using summaries. Defaults to 50.
+            profile_path (str | None, optional): Path to profile for summary system. Required if summary_enabled is True. Defaults to None.
 
         Raises:
-            Exception: If Azure OpenAI client initialization fails due to invalid credentials
+            Exception: If Azure OpenAI client initialization fails due to inval credentials
                 or configuration.
         """
         # Initialize the Azure OpenAI client with authentication
@@ -136,6 +147,24 @@ class Client:
         # Store the original system prompt for reset functionality
         self.original_system_prompt = system_prompt
 
+        # Store summary configuration
+        self.summary_enabled = summary_enabled
+        self.summary_window_size = summary_window_size
+        self.summary_start_round = summary_start_round
+
+        # Initialize summary memory if enabled and profile_path is proved
+        self.summary_memory: SummaryBasedMemory | None = None
+        if summary_enabled and profile_path:
+            self.summary_memory = SummaryBasedMemory(
+                profile_path=profile_path,
+                summary_window_size=summary_window_size,
+                tool_name=summary_model,
+                endpoint=endpoint,
+                deployment=deployment,
+                api_key=api_key,
+                api_version=api_version,
+            )
+
         self.chat_prompt: list[ChatCompletionMessageParam] = [
             {
                 "role": "system",
@@ -146,21 +175,75 @@ class Client:
         if history is not None:
             self.chat_prompt = history
 
+    def _prepare_prompt(self) -> list[ChatCompletionMessageParam]:
+        """
+        Prepare the prompt based on summary settings.
+        
+        Only replaces the earliest conversation windows with summaries,
+        keeping recent conversations in their original form.
+        
+        Returns:
+            list[ChatCompletionMessageParam]: The prepared prompt for the completion.
+        """
+        if not self.summary_enabled or not self.summary_memory:
+            return self.chat_prompt
+        
+        # Calculate the number of conversation rounds (excluding system message)
+        # Each round = 1 user message + 1 assistant message = 2 messages
+        conversation_rounds = (len(self.chat_prompt) - 1) // 2
+        
+        # If we haven't reached the start round threshold, use history directly
+        if conversation_rounds < self.summary_start_round:
+            return self.chat_prompt
+        
+        # Calculate available summaries
+        available_summaries = len(self.summary_memory.summary_list)
+        required_summaries = (conversation_rounds - self.summary_start_round) // self.summary_window_size + 1
+        
+        # If no summaries are available yet, return original history
+        if available_summaries == 0:
+            return self.chat_prompt
+        
+        # Start building the prompt with system message
+        prompt = [self.chat_prompt[0]]
+        
+        # Add summaries for the earliest windows only
+        for summary_idx in range(min(available_summaries, required_summaries)):
+            start_round = summary_idx * self.summary_window_size + 1
+            end_round = (summary_idx + 1) * self.summary_window_size
+            
+            # Access the summary content from the summary dictionary
+            summary = self.summary_memory.summary_list[summary_idx]
+            prompt.append({
+                "role": "assistant", 
+                "content": f"Previous conversation summary (rounds {start_round}-{end_round}): {summary}"
+            })
+        
+        # Calculate the starting index for remaining unsummarized history
+        # Start from: 1 (system) + (available_summaries * summary_window_size * 2) messages
+        summarized_messages = required_summaries * self.summary_window_size * 2
+        remaining_start_index = 1 + summarized_messages
+        
+        # Add all remaining unsummarized conversation history
+        if remaining_start_index < len(self.chat_prompt):
+            prompt.extend(self.chat_prompt[remaining_start_index:])
+        
+        return prompt
+
     def send_message(self, message: str) -> tuple[str, int | None]:
         """
         Send a message to the AI and return the response.
 
         This method adds the user's message to the conversation history, sends the
         entire conversation context to the Azure OpenAI API, and returns the AI's
-        response. The conversation history is automatically maintained.
+        response content and token usage.
 
         Args:
             message (str): The user's message to send to the AI.
 
         Returns:
-            tuple[str, int]: A tuple containing:
-                - The AI's response to the message (str)
-                - The total number of tokens used in the completion (int)
+            tuple[str, int | None]: A tuple containing the assistant's response content
+                and the total tokens used (or None if not available).
 
         Raises:
             ValueError: If the API returns no completion choices or empty content.
@@ -174,18 +257,29 @@ class Client:
             >>> print(tokens)
             100
         """
+        user_history = {
+            "role": "user",
+            "content": message
+        }
+
         # Add the user's message to the conversation history
-        self.chat_prompt.append(
-            {
-                "role": "user",
-                "content": message,
-            }
-        )
+        self.chat_prompt.append(user_history)
+
+        # Prepare the prompt based on summary settings
+        prompt = self._prepare_prompt()
+
+        # Debug
+        # print("=" * 40)
+        # import json
+        # print(f"Prompt:\n {json.dumps(prompt, indent=2)}")
+        # print("=" * 40)
+
+        # chat_prompt = summary(chat_history)
 
         # Send the conversation to Azure OpenAI and get the completion
         completion = self.client.chat.completions.create(
             model=self.completion_config.model,
-            messages=self.chat_prompt,
+            messages=prompt,
             max_tokens=self.completion_config.max_tokens,
             temperature=self.completion_config.temperature,
             top_p=self.completion_config.top_p,
@@ -197,15 +291,25 @@ class Client:
         if not completion.choices or not completion.choices[0].message.content:
             raise ValueError("No completion choices returned")
 
-        self.chat_prompt.append(
-            {
-                "role": "assistant",
-                "content": completion.choices[0].message.content,
-            }
-        )
+        # Add assistant response to history
+        assistant_response = completion.choices[0].message.content
 
-        # Return the AI's response content
-        return completion.choices[0].message.content, (
+        assistant_history = {
+            "role": "assistant",
+            "content": assistant_response
+        }
+
+        self.chat_prompt.append(assistant_history)
+        
+        # Update summary in background if enabled
+        if self.summary_enabled and self.summary_memory:
+            # Create a conversation round (pair) for summary
+            conversation_round = [user_history, assistant_history]
+            # Update summary 
+            self.summary_memory.update(conversation_round)
+
+        # Return the AI's response and token usage
+        return assistant_response, (
             completion.usage.total_tokens if completion.usage else None
         )
 
@@ -245,7 +349,53 @@ class Client:
         Get the index of the last client message in the conversation history.
         """
 
-        return self.chat_prompt[index]
+        try:
+            return self.chat_prompt[index]
+        except IndexError:
+            raise IndexError(f"No message at index {index}")
 
-    def get_history(self):
+    def get_history(self) -> list[ChatCompletionMessageParam]:
+        """
+        Get the conversation history.
+        """
         return self.chat_prompt
+
+    def get_summary_info(self) -> dict:
+        """
+        Get information about the summary system state.
+        
+        Returns:
+            dict: Dictionary containing summary system information.
+        """
+        # Calculate current conversation rounds
+        conversation_rounds = (len(self.chat_prompt) - 1) // 2
+        
+        if not self.summary_memory:
+            return {
+                "summary_enabled": self.summary_enabled,
+                "summary_memory": None,
+                "summaries_count": 0,
+                "conversation_rounds_pending": 0,
+                "total_conversation_rounds": conversation_rounds
+            }
+        
+        return {
+            "summary_enabled": self.summary_enabled,
+            "summary_memory": True,
+            "summaries_count": len(self.summary_memory.summary_list),
+            "conversation_rounds_pending": len(self.summary_memory.history_list),
+            "total_conversation_rounds": conversation_rounds,
+            "window_size": self.summary_window_size,
+            "start_round": self.summary_start_round
+        }
+
+    def get_summary_list(self) -> list[str] | None:
+        """
+        Get the list of summaries generated so far.
+        
+        Returns:
+            list[str] | None: List of summaries, or None if summary is not enabled.
+        """
+        if self.summary_enabled and self.summary_memory:
+            return self.summary_memory.get_summary_list()
+        return None
