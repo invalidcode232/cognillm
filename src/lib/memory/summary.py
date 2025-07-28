@@ -81,7 +81,7 @@ class SummaryBasedMemory:
     ):
         self.window_size: int = summary_window_size
         self.history_list: list[ChatCompletionMessageParam] = []  # Now stores basic message dictionaries
-        self.summary_list: list[dict] = []  # Now stores basic summary dictionaries
+        self.summary_list: list[str] = []  # Now stores basic summary dictionaries
         self.system_prompt: str = get_summary_system_prompt(profile_path=profile_path)
         self.round_count: int = 0
         
@@ -171,12 +171,7 @@ class SummaryBasedMemory:
         )
         if not response.choices or not response.choices[0].message.content:
             raise ValueError("No completion choices returned")
-        summary_content = response.choices[0].message.content.strip()
-    
-        # Create summary dictionary
-        summary = {
-            "summary": summary_content
-        }
+        summary = response.choices[0].message.content.strip()
         
         self.summary_list.append(summary)
         self._clear_history()
@@ -196,11 +191,11 @@ class SummaryBasedMemory:
         if self.summary_signal():
             self.add_summary()
 
-    def get_summary_list(self) -> list[dict]:
+    def get_summary_list(self) -> list[str]:
         """
         Returns the list of summaries.
         
         Returns:
-            list[dict]: The list of summary dictionaries.
+            list[str]: The list of summaries.
         """
         return self.summary_list if self.summary_list else []
