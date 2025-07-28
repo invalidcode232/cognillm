@@ -230,20 +230,20 @@ class Client:
         
         return prompt
 
-    def send_message(self, message: str) -> ChatCompletionMessageParam:
+    def send_message(self, message: str) -> tuple[str, int | None]:
         """
-        Send a message to the AI and return the response as a message dictionary.
+        Send a message to the AI and return the response.
 
         This method adds the user's message to the conversation history, sends the
         entire conversation context to the Azure OpenAI API, and returns the AI's
-        response as a ChatCompletionMessageParam dictionary.
+        response content and token usage.
 
         Args:
             message (str): The user's message to send to the AI.
 
         Returns:
-            ChatCompletionMessageParam: A message dictionary containing the assistant's response
-                with role, content, and token count.
+            tuple[str, int | None]: A tuple containing the assistant's response content
+                and the total tokens used (or None if not available).
 
         Raises:
             ValueError: If the API returns no completion choices or empty content.
@@ -251,10 +251,10 @@ class Client:
                 problems, or other API errors.
 
         Example:
-            >>> response = client.send_message("What is machine learning?")
-            >>> print(response["content"])
+            >>> response, tokens = client.send_message("What is machine learning?")
+            >>> print(response)
             "Machine learning is a subset of artificial intelligence..."
-            >>> print(response["tokens"])
+            >>> print(tokens)
             100
         """
         user_history = {
@@ -308,12 +308,10 @@ class Client:
             # Update summary 
             self.summary_memory.update(conversation_round)
 
-        # Return the AI's response as a message dictionary
-        return {
-            "role": 'assistant',
-            "content": assistant_response,
-            "tokens": completion.usage.total_tokens if completion.usage else None,
-        }
+        # Return the AI's response and token usage
+        return assistant_response, (
+            completion.usage.total_tokens if completion.usage else None
+        )
 
     def add_message_to_history(self, message: str) -> None:
         """
@@ -396,8 +394,8 @@ class Client:
         Get the list of summaries generated so far.
         
         Returns:
-            list[str]: List of summaries.
+            list[str] | None: List of summaries, or None if summary is not enabled.
         """
-        if self.summary_enabled:
+        if self.summary_enabled and self.summary_memory:
             return self.summary_memory.get_summary_list()
         return None

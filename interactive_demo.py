@@ -78,12 +78,11 @@ def main():
             summary_info = cognillm.get_summary_info()
             print(f"📊 Before: {summary_info['total_conversation_rounds']} rounds, {summary_info['summaries_count']} summaries, {summary_info['conversation_rounds_pending']} pending")
 
-            response, history = cognillm.send_message(user_input)
+            message, tokens_used = cognillm.send_message(user_input)
             
             # Show the AI response
-            print(f"AI: {response.get('message', 'No message in response')}")
-            print(f"💭 Tokens used: {history.get('tokens')}")
-            print(f"🆔 Response ID: {history.get('id', 'N/A')}")
+            print(f"AI: {message if message else 'No message in response'}")
+            print(f"💭 Tokens used: {tokens_used if tokens_used else 'N/A'}")
             
             # Show updated summary info after processing
             summary_info = cognillm.get_summary_info()

@@ -164,7 +164,7 @@ class CogniLLM:
                 "Last message is not a dictionary, skipping clean up... (last_message might be of unexpected value)"
             )
 
-    def send_message(self, user_message: str) -> tuple[dict[str, str], ChatCompletionMessageParam]:
+    def send_message(self, user_message: str) -> tuple[str | None, int | None]:
         """
         Send a message to the AI client,
         returns a complex response containing the updated dynamic cognitive model fields and final message output:
@@ -178,17 +178,17 @@ class CogniLLM:
             user_message (str): The message from the user.
 
         Returns:
-            tuple[dict[str, str], ChatCompletionMessageParam]: The parsed response from the AI Client and the message dictionary containing response details.
+            tuple[str | None, int | None]: A tuple containing the parsed message content
+                from the AI response and the total tokens used.
 
         Example:
-            >>> response, history = CogniLLM.send_message("Hello, how are you?")
-            >>> print(response)
-            >>> print(history["content"])
-            >>> print(history["tokens"])
+            >>> message, tokens = CogniLLM.send_message("Hello, how are you?")
+            >>> print(message)
+            >>> print(tokens)
         """
 
         prompt = self.prompt_manager.get_message_prompt(user_message)
-        response_history = self.ai_client.send_message(prompt)
+        response , tokens_used = self.ai_client.send_message(prompt)
 
         # Clean up the response to minimize context length;
         # right now, it simply removes the chain_of_thought from the response.
@@ -197,8 +197,7 @@ class CogniLLM:
         self.stage_manager.handle_message_add(response)
 
         # Validates and parses the response
-        parsed_response = self._parse_response(response_history["content"])
-        tokens_used = response_history["tokens"]
+        parsed_response = self._parse_response(response)
         logger.debug(f"Parsed response:\n{json.dumps(parsed_response, indent=2)}")
         logger.debug(f"Tokens used: {tokens_used}")
         logger.debug("=" * 40)
