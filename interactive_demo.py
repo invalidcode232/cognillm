@@ -71,6 +71,14 @@ def main():
                 print()
                 continue
 
+            if user_input.lower() == "history":
+                history = cognillm.get_conversation_history()
+                print("\n📜 Conversation History:")
+                for message in history:
+                    print(f"  • {message['role']}: {message['content']}")
+                print()
+                continue
+
             if not user_input:
                 continue
 

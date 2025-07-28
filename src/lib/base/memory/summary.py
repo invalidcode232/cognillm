@@ -6,16 +6,16 @@ from openai.types.chat import ChatCompletionMessageParam
 
 PROMPT_PATH = os.path.join(
     os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
+    "base",
+    "memory",
     "include",
-    "prompts",
-    "summaryllm.txt",
+    "summary_prompt.txt",
 )
 
 
 def get_summary_system_prompt(profile_path: str) -> str:
     """
     Returns the system prompt for the summary-based memory system.
-    Default path is 'src/include/prompts/summaryllm.txt'.
 
     Returns:
         str: The system prompt for the summary-based memory system.

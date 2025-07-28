@@ -1,6 +1,8 @@
 from openai.types.chat import ChatCompletionMessageParam
 from openai import AzureOpenAI
-from ..memory.summary import SummaryBasedMemory
+from .memory.summary import SummaryBasedMemory
+import logging
+import json
 
 
 class CompletionConfig:
@@ -99,6 +101,7 @@ class Client:
         summary_model: str = "openai",
         summary_start_round: int = 50,
         profile_path: str | None = None,
+        logger: logging.Logger | None = None,
     ):
         """
         Initialize the Azure OpenAI Client.
@@ -174,6 +177,8 @@ class Client:
 
         if history is not None:
             self.chat_prompt = history
+
+        self.logger = logger
 
     def _prepare_prompt(self) -> list[ChatCompletionMessageParam]:
         """
@@ -269,13 +274,7 @@ class Client:
         # Prepare the prompt based on summary settings
         prompt = self._prepare_prompt()
 
-        # Debug
-        # print("=" * 40)
-        # import json
-        # print(f"Prompt:\n {json.dumps(prompt, indent=2)}")
-        # print("=" * 40)
-
-        # chat_prompt = summary(chat_history)
+        self.logger and self.logger.debug(f"Prompt:\n {json.dumps(prompt, indent=2)}")
 
         # Send the conversation to Azure OpenAI and get the completion
         completion = self.client.chat.completions.create(

@@ -114,6 +114,7 @@ class CogniLLM:
             summary_model=summary_model,
             summary_start_round=summary_start_round,
             profile_path=profile_path,
+            logger=logger,
         )
 
         logger.info(f"Initialized <CogniLLM> successfully")
@@ -148,9 +149,15 @@ class CogniLLM:
                     "Last message is not an assistant message, skipping clean up... (last_message might be of unexpected value)"
                 )
 
-            last_message_data = json.loads(last_message["content"])
-            last_message_data.pop("chain_of_thought", None)
-            last_message["content"] = json.dumps(last_message_data)
+            try:
+                last_message_data = json.loads(last_message["content"])
+                last_message_data.pop("chain_of_thought", None)
+                last_message["content"] = json.dumps(last_message_data)
+            except json.JSONDecodeError as e:
+                logger.error(f"Error parsing last message: {last_message['content']}")
+                logger.error(f"Skipping clean up...")
+                logger.error(f"Error: {e}")
+                return
         else:
             raise ValueError(
                 "Last message is not a dictionary, skipping clean up... (last_message might be of unexpected value)"
