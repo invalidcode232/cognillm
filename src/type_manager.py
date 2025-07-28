@@ -8,7 +8,6 @@ class History:
     Represents a single conversation history entry.
     """
 
-    id: str
     role: str
     content: str
     tokens: Optional[int] = None
@@ -20,7 +19,5 @@ class Summary:
     Represents a summary of conversation history.
     """
 
-    id: str
-    summarized_messages: List[str] # List of ids of summarized messages
     summary: str
 
