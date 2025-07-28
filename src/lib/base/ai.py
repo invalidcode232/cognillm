@@ -213,10 +213,10 @@ class Client:
             end_round = (summary_idx + 1) * self.summary_window_size
             
             # Access the summary content from the summary dictionary
-            summary_obj = self.summary_memory.summary_list[summary_idx]
+            summary = self.summary_memory.summary_list[summary_idx]
             prompt.append({
                 "role": "assistant", 
-                "content": f"Previous conversation summary (rounds {start_round}-{end_round}): {summary_obj['summary']}"
+                "content": f"Previous conversation summary (rounds {start_round}-{end_round}): {summary}"
             })
         
         # Calculate the starting index for remaining unsummarized history
