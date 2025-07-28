@@ -2,8 +2,10 @@ from openai.types.chat.chat_completion_message_param import ChatCompletionMessag
 import json
 
 from .lib.base.ai import Client
+from .lib.stage_manager import StageManager
 from .prompt_manager import PromptManager
 from .logger_config import setup_logger
+from .lib.stage_manager import StageConfig, Stage
 
 
 # Configuration constants
@@ -99,6 +101,20 @@ class CogniLLM:
             history=history,
         )
 
+        # Initialize stage manager
+        self.stage_config: StageConfig = self.prompt_manager.get_stage_config()
+
+        self.stage_manager: StageManager = StageManager(
+            endpoint=endpoint,
+            deployment=deployment,
+            api_key=api_key,
+            api_version=api_version,
+            stage_config=self.stage_config,
+            logger=logger,
+            initial_stage=Stage.PRE_CONTEMPLATION,
+            message_index=0,
+        )
+
         logger.info(f"Initialized <CogniLLM> successfully")
 
     def _clean_response(self) -> None:
@@ -117,6 +133,7 @@ class CogniLLM:
             >>> CogniLLM._clean_response()
             >>> return original_response # We will return the full response to the user, but clean it up on the backend.
         """
+
         last_message = self.ai_client.get_history_index(-1)
         if "content" in last_message and "role" in last_message:
             if last_message["role"] != "assistant":
@@ -152,12 +169,15 @@ class CogniLLM:
             >>> response = CogniLLM.send_message("Hello, how are you?")
             >>> print(response)
         """
+
         prompt = self.prompt_manager.get_message_prompt(user_message)
         response, tokens_used = self.ai_client.send_message(prompt)
 
         # Clean up the response to minimize context length;
         # right now, it simply removes the chain_of_thought from the response.
         self._clean_response()
+
+        self.stage_manager.handle_message_add(response)
 
         # Validates and parses the response
         parsed_response = self._parse_response(response)
@@ -198,4 +218,5 @@ class CogniLLM:
             >>> CogniLLM.reset_conversation()
             >>> print(CogniLLM.get_conversation_history())
         """
+
         self.ai_client.reset_conversation()

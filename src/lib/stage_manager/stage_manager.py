@@ -1,5 +1,5 @@
 import logging
-from .types import Stage, EvaluationConfig, EvaluationMethods
+from .types import Stage, EvaluationMethods, StageConfig
 from .evaluators import Evaluator
 
 
@@ -22,7 +22,7 @@ class StageManager:
         api_key: str,
         api_version: str,
         logger: logging.Logger,
-        stage_config: dict[Stage, EvaluationConfig],
+        stage_config: StageConfig,
         initial_stage: Stage = Stage.PRE_CONTEMPLATION,
         message_index: int = 0,
     ):
@@ -35,7 +35,7 @@ class StageManager:
             api_key (str): The API key of the AI client.
             api_version (str): The API version of the AI client.
             logger (logging.Logger): The logger to use for logging.
-            stage_config (dict[Stage, EvaluationConfig]): The stage config mapping stages to their evaluation configurations.
+            stage_config (StageConfig): The stage config mapping stages to their evaluation configurations.
             initial_stage (Stage): The initial stage.
             message_index (int): The index of the first message, defaults to 0.
         """
@@ -56,11 +56,18 @@ class StageManager:
 
         # Stage tracking
         self.stage_history = {
-            initial_stage: {
-                "start": self.current_message_index,
-                "end": -1,
-                "messages": [],
-            }
+            # initial_stage: {
+            #     "start": self.current_message_index,
+            #     "end": -1,
+            #     "messages": [],
+            # }
+            initial_stage: [
+                {
+                    "id": "...",
+                    "role": "user",
+                    "message": "...",
+                }
+            ]
         }
 
         self.logger.info(

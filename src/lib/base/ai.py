@@ -182,6 +182,8 @@ class Client:
             }
         )
 
+        # chat_prompt = summary(chat_history)
+
         # Send the conversation to Azure OpenAI and get the completion
         completion = self.client.chat.completions.create(
             model=self.completion_config.model,

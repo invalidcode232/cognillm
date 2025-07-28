@@ -39,10 +39,10 @@ class Evaluator:
 
         # Validate and load prompts
         for prompt_name in prompt_names:
-            prompt_path = os.path.join(prompt_path, f"{prompt_name.value}.txt")
-            if not os.path.exists(prompt_path):
-                raise FileNotFoundError(f"Prompt file not found: {prompt_path}")
-            with open(prompt_path, "r") as file:
+            prompt_file_path = os.path.join(prompt_path, f"{prompt_name.value}.txt")
+            if not os.path.exists(prompt_file_path):
+                raise FileNotFoundError(f"Prompt file not found: {prompt_file_path}")
+            with open(prompt_file_path, "r") as file:
                 self.ai_clients[prompt_name] = Client(
                     system_prompt=file.read(),
                     endpoint=endpoint,
