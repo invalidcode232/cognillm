@@ -1,6 +1,5 @@
 from openai.types.chat import ChatCompletionMessageParam
 from openai import AzureOpenAI
-import uuid
 from ..memory.summary import SummaryBasedMemory
 from ...type_manager import History
 
@@ -58,12 +57,12 @@ class Client:
     """
     Azure OpenAI Chat Completion Client.
 
-    This client provides a convenient interface for interacting with Azure OpenAI's
+    This client proves a convenient interface for interacting with Azure OpenAI's
     chat completion API. It manages the conversation context, handles authentication,
-    and provides methods for sending messages and receiving responses.
+    and proves methods for sending messages and receiving responses.
 
     The client maintains conversation history automatically and applies the specified
-    system prompt to guide the AI's behavior throughout the conversation.
+    system prompt to gue the AI's behavior throughout the conversation.
 
     Attributes:
         client (AzureOpenAI): The underlying Azure OpenAI client instance.
@@ -106,7 +105,7 @@ class Client:
         Initialize the Azure OpenAI Client.
 
         Sets up the Azure OpenAI client connection, configures completion parameters,
-        and initializes the conversation with the provided system prompt.
+        and initializes the conversation with the proved system prompt.
 
         Args:
             system_prompt (str): The system prompt that defines the AI's role and behavior.
@@ -127,7 +126,7 @@ class Client:
             profile_path (str | None, optional): Path to profile for summary system. Required if summary_enabled is True. Defaults to None.
 
         Raises:
-            Exception: If Azure OpenAI client initialization fails due to invalid credentials
+            Exception: If Azure OpenAI client initialization fails due to inval credentials
                 or configuration.
         """
         # Initialize the Azure OpenAI client with authentication
@@ -155,7 +154,7 @@ class Client:
         self.summary_window_size = summary_window_size
         self.summary_start_round = summary_start_round
 
-        # Initialize summary memory if enabled and profile_path is provided
+        # Initialize summary memory if enabled and profile_path is proved
         self.summary_memory: SummaryBasedMemory | None = None
         if summary_enabled and profile_path:
             self.summary_memory = SummaryBasedMemory(
@@ -246,7 +245,7 @@ class Client:
 
         Returns:
             History: A History dataclass object containing the assistant's response
-                with id, role, content, and token count.
+                with role, content, and token count.
 
         Raises:
             ValueError: If the API returns no completion choices or empty content.
@@ -305,12 +304,10 @@ class Client:
         if self.summary_enabled and self.summary_memory:
             # Create History objects for the conversation round
             user_history = History(
-                id=str(uuid.uuid4()),
                 role="user",
                 content=message
             )
             assistant_history = History(
-                id=str(uuid.uuid4()),
                 role="assistant", 
                 content=assistant_response
             )
@@ -322,7 +319,6 @@ class Client:
 
         # Return the AI's response as a History object
         return History(
-            id=str(uuid.uuid4()),
             role="assistant",
             content=assistant_response,
             tokens=completion.usage.total_tokens if completion.usage else None
