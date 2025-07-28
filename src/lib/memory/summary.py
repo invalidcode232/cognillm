@@ -1,7 +1,6 @@
 import json
 import os
 import yaml
-import uuid
 from openai import AzureOpenAI
 from type_manager import Summary, History
 
@@ -148,8 +147,6 @@ class SummaryBasedMemory:
         Generates a summary of the current history and adds it to the summary list.
         If the summary signal is triggered, it will create a summary using the summary tool.
         """
-        # Get the list of message IDs that will be summarized
-        summarized_message_ids = [item.id for item in self.history_list]
         
         # Create prompt with system message followed by conversation history in natural order
         prompt = [{"role": "system", "content": self.system_prompt}]
@@ -162,10 +159,10 @@ class SummaryBasedMemory:
             })
         
         # Debug
-        print("=" * 40)
-        import json
-        print(f"Prompt for summary:\n {json.dumps(prompt, indent=2)}")
-        print("=" * 40)
+        # print("=" * 40)
+        # import json
+        # print(f"Prompt for summary:\n {json.dumps(prompt, indent=2)}")
+        # print("=" * 40)
 
         response = self.summary_tool.chat.completions.create(
             messages=prompt,
@@ -182,8 +179,6 @@ class SummaryBasedMemory:
     
         # Create Summary dataclass instance
         summary = Summary(
-            id=str(uuid.uuid4()),
-            summarized_messages=summarized_message_ids,
             summary=summary_content
         )
         
