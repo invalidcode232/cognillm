@@ -5,7 +5,7 @@ from .lib.base.ai import Client
 from .lib.stage_manager import StageManager
 from .prompt_manager import PromptManager
 from .logger_config import setup_logger
-from .lib.stage_manager import StageConfig, Stage
+from .lib.stage_manager import Stage
 
 
 # Configuration constants
@@ -116,20 +116,6 @@ class CogniLLM:
             profile_path=profile_path,
         )
 
-        # Initialize stage manager
-        self.stage_config: StageConfig = self.prompt_manager.get_stage_config()
-
-        self.stage_manager: StageManager = StageManager(
-            endpoint=endpoint,
-            deployment=deployment,
-            api_key=api_key,
-            api_version=api_version,
-            stage_config=self.stage_config,
-            logger=logger,
-            initial_stage=Stage.PRE_CONTEMPLATION,
-            message_index=0,
-        )
-
         logger.info(f"Initialized <CogniLLM> successfully")
 
     def _clean_response(self) -> None:
@@ -194,7 +180,6 @@ class CogniLLM:
         # right now, it simply removes the chain_of_thought from the response.
         self._clean_response()
 
-        self.stage_manager.handle_message_add(response)
 
         # Validates and parses the response
         parsed_response = self._parse_response(response)

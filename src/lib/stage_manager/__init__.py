@@ -1,4 +1,4 @@
 from .stage_manager import StageManager
-from .types import Stage, EvaluationConfig, StageConfig
+from .types import Stage, EvaluationConfig
 
-__all__ = ["StageManager", "Stage", "EvaluationConfig", "StageConfig"]
+__all__ = ["StageManager", "Stage", "EvaluationConfig"]

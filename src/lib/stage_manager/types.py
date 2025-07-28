@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import List, Union, Optional, Dict, Any
+from typing import List, Union, Optional
 from dataclasses import dataclass
 
 
@@ -77,37 +77,3 @@ class EvaluationConfig:
             method=EvaluationMethods.TABLE_COMPARISON,
             data=TableData(costs=costs, rewards=rewards),
         )
-
-
-@dataclass
-class StageConfig:
-    """
-    Configuration for the stage manager.
-
-    Sample stage config:
-    >>> {
-    ...     Stage.PRE_CONTEMPLATION: EvaluationConfig.from_objectives(["Madam Chan must be able to provide for her children"]),
-    ...     Stage.CONTEMPLATION: EvaluationConfig.from_table(costs=["Madam Chan must be able to provide for her children with her husband"], rewards=["If madam chan has more money, she can provide for her children"]),
-    ...     Stage.PREPARATION: EvaluationConfig.from_objectives(["Make Madam Chan realize that she has the right to leave her husband"]),
-    ... }
-    """
-
-    pre_contemplation: Optional[EvaluationConfig]
-    contemplation: Optional[EvaluationConfig]
-    preparation: Optional[EvaluationConfig]
-
-    def __len__(self) -> int:
-        """
-        Return the number of configured stages (non-None evaluation configs).
-
-        Returns:
-            int: The number of stages that have been configured.
-        """
-        count = 0
-        if self.pre_contemplation is not None:
-            count += 1
-        if self.contemplation is not None:
-            count += 1
-        if self.preparation is not None:
-            count += 1
-        return count

@@ -2,8 +2,6 @@ import os
 import json
 import yaml
 
-from .lib.stage_manager import StageConfig
-
 
 # Path to prompt we use to establish the base AI logic
 PROMPT_PATH = os.path.join(
@@ -13,7 +11,7 @@ PROMPT_PATH = os.path.join(
 
 class PromptManager:
     @staticmethod
-    def _validate_config(config: str) -> StageConfig:
+    def _validate_config(config: str) -> dict[str, str]:
         """
         Validates the config data.
         """
@@ -22,7 +20,7 @@ class PromptManager:
         if not config:
             raise ValueError("Config data is empty")
 
-        return StageConfig(**config)
+        return config
 
     @staticmethod
     def _validate_profile(profile: str) -> dict[str, str]:
@@ -108,11 +106,11 @@ class PromptManager:
         """
         return user_message
 
-    def get_stage_config(self) -> StageConfig:
+    def get_config(self) -> dict[str, str]:
         """
-        Returns the stage config of the profile.
+        Returns the config of the profile.
 
         Returns:
-            StageConfig: The stage config of the profile.
+            dict[str, str]: The config of the profile.
         """
         return self.config
