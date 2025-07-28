@@ -168,7 +168,7 @@ class Client:
                 api_version=api_version,
             )
 
-        self.chat_history: list[ChatCompletionMessageParam] = [
+        self.chat_prompt: list[ChatCompletionMessageParam] = [
             {
                 "role": "system",
                 "content": system_prompt,
@@ -176,7 +176,7 @@ class Client:
         ]
 
         if history is not None:
-            self.chat_history = history
+            self.chat_prompt = history
 
     def _prepare_prompt(self) -> list[ChatCompletionMessageParam]:
         """
@@ -189,15 +189,15 @@ class Client:
             list[ChatCompletionMessageParam]: The prepared prompt for the completion.
         """
         if not self.summary_enabled or not self.summary_memory:
-            return self.chat_history
+            return self.chat_prompt
         
         # Calculate the number of conversation rounds (excluding system message)
         # Each round = 1 user message + 1 assistant message = 2 messages
-        conversation_rounds = (len(self.chat_history) - 1) // 2
+        conversation_rounds = (len(self.chat_prompt) - 1) // 2
         
         # If we haven't reached the start round threshold, use history directly
         if conversation_rounds < self.summary_start_round:
-            return self.chat_history
+            return self.chat_prompt
         
         # Calculate available summaries
         available_summaries = len(self.summary_memory.summary_list)
@@ -205,10 +205,10 @@ class Client:
         
         # If no summaries are available yet, return original history
         if available_summaries == 0:
-            return self.chat_history
+            return self.chat_prompt
         
         # Start building the prompt with system message
-        prompt = [self.chat_history[0]]
+        prompt = [self.chat_prompt[0]]
         
         # Add summaries for the earliest windows only
         for summary_idx in range(min(available_summaries, required_summaries)):
@@ -228,8 +228,8 @@ class Client:
         remaining_start_index = 1 + summarized_messages
         
         # Add all remaining unsummarized conversation history
-        if remaining_start_index < len(self.chat_history):
-            prompt.extend(self.chat_history[remaining_start_index:])
+        if remaining_start_index < len(self.chat_prompt):
+            prompt.extend(self.chat_prompt[remaining_start_index:])
         
         return prompt
 
@@ -260,9 +260,16 @@ class Client:
             >>> print(response.tokens)
             100
         """
+        user_history = History(
+            id=str(uuid.uuid4()),
+            role="user",
+            content=message
+        )
+
         # Add the user's message to the conversation history
-        self.chat_history.append(
+        self.chat_prompt.append(
             {
+                "id": user_history.id,
                 "role": "user",
                 "content": message,
             }
@@ -294,39 +301,31 @@ class Client:
 
         # Add assistant response to history
         assistant_response = completion.choices[0].message.content
-        self.chat_history.append(
+
+        assistant_history = History(
+            id=str(uuid.uuid4()),
+            role="assistant", 
+            content=assistant_response
+        )
+
+        self.chat_prompt.append(
             {
+                "id": assistant_history.id,
                 "role": "assistant",
                 "content": assistant_response,
             }
         )
 
+        
         # Update summary in background if enabled
         if self.summary_enabled and self.summary_memory:
-            # Create History objects for the conversation round
-            user_history = History(
-                id=str(uuid.uuid4()),
-                role="user",
-                content=message
-            )
-            assistant_history = History(
-                id=str(uuid.uuid4()),
-                role="assistant", 
-                content=assistant_response
-            )
-            
             # Create a conversation round (pair) for summary
             conversation_round = [user_history, assistant_history]
             # Update summary 
             self.summary_memory.update(conversation_round)
 
         # Return the AI's response as a History object
-        return History(
-            id=str(uuid.uuid4()),
-            role="assistant",
-            content=assistant_response,
-            tokens=completion.usage.total_tokens if completion.usage else None
-        )
+        return assistant_history
 
     def add_message_to_history(self, message: str) -> None:
         """
@@ -338,7 +337,7 @@ class Client:
         Args:
             message (str): The message to add to conversation history.
         """
-        self.chat_history.append(
+        self.chat_prompt.append(
             {
                 "role": "user",
                 "content": message,
@@ -352,7 +351,7 @@ class Client:
         This method is useful for benchmarking or when you want to start a fresh
         conversation while reusing the same client instance.
         """
-        self.chat_history = [
+        self.chat_prompt = [
             {
                 "role": "system",
                 "content": self.original_system_prompt,
@@ -364,10 +363,10 @@ class Client:
         Get the index of the last client message in the conversation history.
         """
 
-        return self.chat_history[index]
+        return self.chat_prompt[index]
 
     def get_history(self):
-        return self.chat_history
+        return self.chat_prompt
 
     def get_summary_info(self) -> dict:
         """
@@ -377,7 +376,7 @@ class Client:
             dict: Dictionary containing summary system information.
         """
         # Calculate current conversation rounds
-        conversation_rounds = (len(self.chat_history) - 1) // 2
+        conversation_rounds = (len(self.chat_prompt) - 1) // 2
         
         if not self.summary_memory:
             return {
