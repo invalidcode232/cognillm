@@ -82,8 +82,8 @@ def main():
             
             # Show the AI response
             print(f"AI: {response.get('message', 'No message in response')}")
-            print(f"💭 Tokens used: {history.tokens}")
-            print(f"🆔 Response ID: {history.id}")
+            print(f"💭 Tokens used: {history.get('tokens')}")
+            print(f"🆔 Response ID: {history.get('id', 'N/A')}")
             
             # Show updated summary info after processing
             summary_info = cognillm.get_summary_info()

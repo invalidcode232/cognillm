@@ -4,7 +4,6 @@ import logging
 
 from .lib.base.ai import Client
 from .prompt_manager import PromptManager
-from .type_manager import History
 
 
 logger = logging.getLogger(__name__)
@@ -87,6 +86,7 @@ class CogniLLM:
         """
         self.history: list[ChatCompletionMessageParam] | None = history
         self.profile_path = profile_path
+        self.summary_enabled: bool = summary_enabled
 
         # Generate the prompt for AI Client
         self.prompt_manager: PromptManager = PromptManager(
@@ -147,7 +147,7 @@ class CogniLLM:
                 "Last message is not a dictionary, skipping clean up... (last_message might be of unexpected value)"
             )
 
-    def send_message(self, user_message: str) -> tuple[dict[str, str], History]:
+    def send_message(self, user_message: str) -> tuple[dict[str, str], ChatCompletionMessageParam]:
         """
         Send a message to the AI client,
         returns a complex response containing the updated dynamic cognitive model fields and final message output:
@@ -161,13 +161,13 @@ class CogniLLM:
             user_message (str): The message from the user.
 
         Returns:
-            tuple[dict[str, str], History]: The parsed response from the AI Client and the History object containing response details.
+            tuple[dict[str, str], ChatCompletionMessageParam]: The parsed response from the AI Client and the message dictionary containing response details.
 
         Example:
             >>> response, history = CogniLLM.send_message("Hello, how are you?")
             >>> print(response)
-            >>> print(history.content)
-            >>> print(history.tokens)
+            >>> print(history["content"])
+            >>> print(history["tokens"])
         """
         prompt = self.prompt_manager.get_message_prompt(user_message)
         response_history = self.ai_client.send_message(prompt)
@@ -177,7 +177,7 @@ class CogniLLM:
         self._clean_response()
 
         # Validates and parses the response
-        return self._parse_response(response_history.content), response_history
+        return self._parse_response(response_history["content"]), response_history
 
     def get_conversation_history(self) -> list[ChatCompletionMessageParam]:
         """
@@ -220,3 +220,14 @@ class CogniLLM:
             dict: Dictionary containing summary system information.
         """
         return self.ai_client.get_summary_info()
+    
+    def get_summary_list(self) -> list[dict] | None:
+        """
+        Get the list of summaries generated so far.
+        
+        Returns:
+            list[dict]: List of summary dictionaries.
+        """
+        if self.summary_enabled:
+            return self.ai_client.get_summary_list()
+        return None

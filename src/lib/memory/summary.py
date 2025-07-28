@@ -2,7 +2,7 @@ import json
 import os
 import yaml
 from openai import AzureOpenAI
-from type_manager import Summary, History
+from openai.types.chat import ChatCompletionMessageParam
 
 PROMPT_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "include", "prompts", "summaryllm.txt")
 
@@ -80,8 +80,8 @@ class SummaryBasedMemory:
         presence_penalty: float = 0,
     ):
         self.window_size: int = summary_window_size
-        self.history_list: list[History] = []  # Now stores History dataclass instances
-        self.summary_list: list[Summary] = []  # Now stores Summary dataclass instances
+        self.history_list: list[ChatCompletionMessageParam] = []  # Now stores basic message dictionaries
+        self.summary_list: list[dict] = []  # Now stores basic summary dictionaries
         self.system_prompt: str = get_summary_system_prompt(profile_path=profile_path)
         self.round_count: int = 0
         
@@ -127,12 +127,12 @@ class SummaryBasedMemory:
             return True
         return False
 
-    def add_to_history(self, history_item: History):
+    def add_to_history(self, history_item: ChatCompletionMessageParam):
         """
         Adds an item to the history list and maintains the window size.
         
         Args:
-            history_item (History): The History dataclass item to be added to the history.
+            history_item (ChatCompletionMessageParam): The message dictionary to be added to the history.
         """
         self.history_list.append(history_item)
     
@@ -140,7 +140,7 @@ class SummaryBasedMemory:
         """
         Clears the history list.
         """
-        self.history_list: list[History] = []
+        self.history_list: list[ChatCompletionMessageParam] = []
 
     def add_summary(self):
         """
@@ -152,11 +152,7 @@ class SummaryBasedMemory:
         prompt = [{"role": "system", "content": self.system_prompt}]
         
         # Add each message in the order they appear, maintaining user-assistant flow
-        for history_item in self.history_list:
-            prompt.append({
-                "role": history_item.role,
-                "content": history_item.content
-            })
+        prompt.extend(self.history_list)
         
         # Debug
         # print("=" * 40)
@@ -177,25 +173,34 @@ class SummaryBasedMemory:
             raise ValueError("No completion choices returned")
         summary_content = response.choices[0].message.content.strip()
     
-        # Create Summary dataclass instance
-        summary = Summary(
-            summary=summary_content
-        )
+        # Create summary dictionary
+        summary = {
+            "summary": summary_content
+        }
         
         self.summary_list.append(summary)
         self._clear_history()
         self.reset_round_count()
         return summary
     
-    def update(self, history_items: list[History]):
+    def update(self, history_items: list[ChatCompletionMessageParam]):
         """
-        Automatically update memory with a list of History items
+        Automatically update memory with a list of message dictionaries
         
         Args:
-            history_items (list[History]): List of History dataclass items to be added.
+            history_items (list[ChatCompletionMessageParam]): List of message dictionaries to be added.
         """
         for history_item in history_items:
             self.add_to_history(history_item)
         self.increase_round_count()
         if self.summary_signal():
             self.add_summary()
+
+    def get_summary_list(self) -> list[dict]:
+        """
+        Returns the list of summaries.
+        
+        Returns:
+            list[dict]: The list of summary dictionaries.
+        """
+        return self.summary_list if self.summary_list else []

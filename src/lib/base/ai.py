@@ -1,8 +1,6 @@
 from openai.types.chat import ChatCompletionMessageParam
 from openai import AzureOpenAI
 from ..memory.summary import SummaryBasedMemory
-from ...type_manager import History
-
 
 class CompletionConfig:
     """
@@ -214,11 +212,11 @@ class Client:
             start_round = summary_idx * self.summary_window_size + 1
             end_round = (summary_idx + 1) * self.summary_window_size
             
-            # Access the summary content from the Summary dataclass
+            # Access the summary content from the summary dictionary
             summary_obj = self.summary_memory.summary_list[summary_idx]
             prompt.append({
                 "role": "assistant", 
-                "content": f"Previous conversation summary (rounds {start_round}-{end_round}): {summary_obj.summary}"
+                "content": f"Previous conversation summary (rounds {start_round}-{end_round}): {summary_obj['summary']}"
             })
         
         # Calculate the starting index for remaining unsummarized history
@@ -232,19 +230,19 @@ class Client:
         
         return prompt
 
-    def send_message(self, message: str) -> History:
+    def send_message(self, message: str) -> ChatCompletionMessageParam:
         """
-        Send a message to the AI and return the response as a History object.
+        Send a message to the AI and return the response as a message dictionary.
 
         This method adds the user's message to the conversation history, sends the
         entire conversation context to the Azure OpenAI API, and returns the AI's
-        response as a History dataclass object.
+        response as a ChatCompletionMessageParam dictionary.
 
         Args:
             message (str): The user's message to send to the AI.
 
         Returns:
-            History: A History dataclass object containing the assistant's response
+            ChatCompletionMessageParam: A message dictionary containing the assistant's response
                 with role, content, and token count.
 
         Raises:
@@ -254,25 +252,18 @@ class Client:
 
         Example:
             >>> response = client.send_message("What is machine learning?")
-            >>> print(response.content)
+            >>> print(response["content"])
             "Machine learning is a subset of artificial intelligence..."
-            >>> print(response.tokens)
+            >>> print(response["tokens"])
             100
         """
-        user_history = History(
-            id=str(uuid.uuid4()),
-            role="user",
-            content=message
-        )
+        user_history = {
+            "role": "user",
+            "content": message
+        }
 
         # Add the user's message to the conversation history
-        self.chat_prompt.append(
-            {
-                "id": user_history.id,
-                "role": "user",
-                "content": message,
-            }
-        )
+        self.chat_prompt.append(user_history)
 
         # Prepare the prompt based on summary settings
         prompt = self._prepare_prompt()
@@ -301,51 +292,26 @@ class Client:
         # Add assistant response to history
         assistant_response = completion.choices[0].message.content
 
-        assistant_history = History(
-            id=str(uuid.uuid4()),
-            role="assistant", 
-            content=assistant_response
-        )
+        assistant_history = {
+            "role": "assistant",
+            "content": assistant_response
+        }
 
-        self.chat_prompt.append(
-            {
-                "id": assistant_history.id,
-                "role": "assistant",
-                "content": assistant_response,
-            }
-        )
-
+        self.chat_prompt.append(assistant_history)
         
         # Update summary in background if enabled
         if self.summary_enabled and self.summary_memory:
-<<<<<<< HEAD
-=======
-            # Create History objects for the conversation round
-            user_history = History(
-                role="user",
-                content=message
-            )
-            assistant_history = History(
-                role="assistant", 
-                content=assistant_response
-            )
-            
->>>>>>> refs/remotes/origin/mi-ltm
             # Create a conversation round (pair) for summary
             conversation_round = [user_history, assistant_history]
             # Update summary 
             self.summary_memory.update(conversation_round)
 
-        # Return the AI's response as a History object
-<<<<<<< HEAD
-        return assistant_history
-=======
-        return History(
-            role="assistant",
-            content=assistant_response,
-            tokens=completion.usage.total_tokens if completion.usage else None
-        )
->>>>>>> refs/remotes/origin/mi-ltm
+        # Return the AI's response as a message dictionary
+        return {
+            "role": 'assistant',
+            "content": assistant_response,
+            "tokens": completion.usage.total_tokens if completion.usage else None,
+        }
 
     def add_message_to_history(self, message: str) -> None:
         """
@@ -416,3 +382,14 @@ class Client:
             "window_size": self.summary_window_size,
             "start_round": self.summary_start_round
         }
+
+    def get_summary_list(self) -> list[dict] | None:
+        """
+        Get the list of summaries generated so far.
+        
+        Returns:
+            list[dict]: List of summary dictionaries.
+        """
+        if self.summary_enabled:
+            return self.summary_memory.get_summary_list()
+        return None
