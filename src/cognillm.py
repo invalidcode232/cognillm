@@ -1,17 +1,18 @@
 from openai.types.chat.chat_completion_message_param import ChatCompletionMessageParam
 import json
-import logging
 
 from .lib.base.ai import Client
+from .lib.stage_manager import StageManager
 from .prompt_manager import PromptManager
+from .logger_config import setup_logger
+from .lib.stage_manager import StageConfig, Stage
 
 
-logger = logging.getLogger(__name__)
-
-
-# AI completion parameter configuration
+# Configuration constants
 MAX_TOKENS: int = 1000
 TEMPERATURE: float = 0.5
+
+logger = setup_logger()
 
 
 class CogniLLM:
@@ -48,7 +49,9 @@ class CogniLLM:
 
         for field in fields:
             if field not in response:
-                logger.warning(f"Response is missing required field: {field}")
+                raise ValueError(
+                    f"Text generator LLM response is missing required field: {field}"
+                )
 
         return response
 
@@ -88,13 +91,13 @@ class CogniLLM:
         self.profile_path = profile_path
         self.summary_enabled: bool = summary_enabled
 
-        # Generate the prompt for AI Client
+        # Initialize PromptManager
         self.prompt_manager: PromptManager = PromptManager(
             profile_path=profile_path,
         )
         self.base_prompt: str = self.prompt_manager.get_base_prompt()
 
-        logger.info(f"Prompt generated successfully: {self.base_prompt}")
+        logger.debug("Base prompt retrieved successfully")
 
         # Initialize the AI Client
         self.ai_client: Client = Client(
@@ -113,7 +116,21 @@ class CogniLLM:
             profile_path=profile_path,
         )
 
-        logger.info(f"AI Client initialized successfully: {self.ai_client}")
+        # Initialize stage manager
+        self.stage_config: StageConfig = self.prompt_manager.get_stage_config()
+
+        self.stage_manager: StageManager = StageManager(
+            endpoint=endpoint,
+            deployment=deployment,
+            api_key=api_key,
+            api_version=api_version,
+            stage_config=self.stage_config,
+            logger=logger,
+            initial_stage=Stage.PRE_CONTEMPLATION,
+            message_index=0,
+        )
+
+        logger.info(f"Initialized <CogniLLM> successfully")
 
     def _clean_response(self) -> None:
         """
@@ -131,19 +148,19 @@ class CogniLLM:
             >>> CogniLLM._clean_response()
             >>> return original_response # We will return the full response to the user, but clean it up on the backend.
         """
+
         last_message = self.ai_client.get_history_index(-1)
         if "content" in last_message and "role" in last_message:
             if last_message["role"] != "assistant":
-                logger.warning(
+                raise ValueError(
                     "Last message is not an assistant message, skipping clean up... (last_message might be of unexpected value)"
                 )
-                return
 
             last_message_data = json.loads(last_message["content"])
             last_message_data.pop("chain_of_thought", None)
             last_message["content"] = json.dumps(last_message_data)
         else:
-            logger.warning(
+            raise ValueError(
                 "Last message is not a dictionary, skipping clean up... (last_message might be of unexpected value)"
             )
 
@@ -169,6 +186,7 @@ class CogniLLM:
             >>> print(history["content"])
             >>> print(history["tokens"])
         """
+
         prompt = self.prompt_manager.get_message_prompt(user_message)
         response_history = self.ai_client.send_message(prompt)
 
@@ -176,8 +194,16 @@ class CogniLLM:
         # right now, it simply removes the chain_of_thought from the response.
         self._clean_response()
 
+        self.stage_manager.handle_message_add(response)
+
         # Validates and parses the response
-        return self._parse_response(response_history["content"]), response_history
+        parsed_response = self._parse_response(response_history["content"])
+        tokens_used = response_history["tokens"]
+        logger.debug(f"Parsed response:\n{json.dumps(parsed_response, indent=2)}")
+        logger.debug(f"Tokens used: {tokens_used}")
+        logger.debug("=" * 40)
+
+        return parsed_response.get("message"), tokens_used
 
     def get_conversation_history(self) -> list[ChatCompletionMessageParam]:
         """
@@ -210,6 +236,7 @@ class CogniLLM:
             >>> CogniLLM.reset_conversation()
             >>> print(CogniLLM.get_conversation_history())
         """
+
         self.ai_client.reset_conversation()
 
     def get_summary_info(self) -> dict:

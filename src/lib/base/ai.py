@@ -274,6 +274,8 @@ class Client:
         # print(f"Prompt:\n {json.dumps(prompt, indent=2)}")
         # print("=" * 40)
 
+        # chat_prompt = summary(chat_history)
+
         # Send the conversation to Azure OpenAI and get the completion
         completion = self.client.chat.completions.create(
             model=self.completion_config.model,
@@ -349,9 +351,15 @@ class Client:
         Get the index of the last client message in the conversation history.
         """
 
-        return self.chat_prompt[index]
+        try:
+            return self.chat_prompt[index]
+        except IndexError:
+            raise IndexError(f"No message at index {index}")
 
-    def get_history(self):
+    def get_history(self) -> list[ChatCompletionMessageParam]:
+        """
+        Get the conversation history.
+        """
         return self.chat_prompt
 
     def get_summary_info(self) -> dict:
