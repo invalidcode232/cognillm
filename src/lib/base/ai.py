@@ -272,10 +272,10 @@ class Client:
         prompt = self._prepare_prompt()
 
         # Debug
-        print("=" * 40)
-        import json
-        print(f"Prompt:\n {json.dumps(prompt, indent=2)}")
-        print("=" * 40)
+        # print("=" * 40)
+        # import json
+        # print(f"Prompt:\n {json.dumps(prompt, indent=2)}")
+        # print("=" * 40)
 
         # Send the conversation to Azure OpenAI and get the completion
         completion = self.client.chat.completions.create(

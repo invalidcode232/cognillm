@@ -10,7 +10,7 @@ PROMPT_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__fil
 def get_summary_system_prompt(profile_path: str) -> str:
     """
     Returns the system prompt for the summary-based memory system.
-    Default path is 'src/include/prompts/cognillm.txt'.
+    Default path is 'src/include/prompts/summaryllm.txt'.
     
     Returns:
         str: The system prompt for the summary-based memory system.
@@ -110,6 +110,13 @@ class SummaryBasedMemory:
         This can be used to track the number of conversation rounds.
         """
         self.round_count += 1
+    
+    def reset_round_count(self):
+        """
+        Resets the round count to 0.
+        This can be used to reset the conversation state.
+        """
+        self.round_count = 0
 
     def summary_signal(self):
         """
@@ -182,6 +189,7 @@ class SummaryBasedMemory:
         
         self.summary_list.append(summary)
         self._clear_history()
+        self.reset_round_count()
         return summary
     
     def update(self, history_items: list[History]):
