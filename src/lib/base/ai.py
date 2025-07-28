@@ -383,12 +383,12 @@ class Client:
             "start_round": self.summary_start_round
         }
 
-    def get_summary_list(self) -> list[dict] | None:
+    def get_summary_list(self) -> list[str] | None:
         """
         Get the list of summaries generated so far.
         
         Returns:
-            list[dict]: List of summary dictionaries.
+            list[str]: List of summaries.
         """
         if self.summary_enabled:
             return self.summary_memory.get_summary_list()
