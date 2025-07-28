@@ -117,6 +117,12 @@ class CogniLLM:
         )
 
         logger.info(f"Initialized <CogniLLM> successfully")
+        logger.info(
+            f"Summary will start after {summary_start_round} conversation rounds"
+        )
+        logger.info(
+            f"Each summary window contains {summary_window_size} conversation rounds"
+        )
 
     def _clean_response(self) -> None:
         """
@@ -174,12 +180,11 @@ class CogniLLM:
         """
 
         prompt = self.prompt_manager.get_message_prompt(user_message)
-        response , tokens_used = self.ai_client.send_message(prompt)
+        response, tokens_used = self.ai_client.send_message(prompt)
 
         # Clean up the response to minimize context length;
         # right now, it simply removes the chain_of_thought from the response.
         self._clean_response()
-
 
         # Validates and parses the response
         parsed_response = self._parse_response(response)
@@ -226,19 +231,19 @@ class CogniLLM:
     def get_summary_info(self) -> dict:
         """
         Get information about the summary system state.
-        
+
         Returns:
             dict: Dictionary containing summary system information.
         """
+
         return self.ai_client.get_summary_info()
-    
+
     def get_summary_list(self) -> list[str] | None:
         """
         Get the list of summaries generated so far.
-        
+
         Returns:
             list[str]: List of summaries.
         """
-        if self.summary_enabled:
-            return self.ai_client.get_summary_list()
-        return None
+
+        return self.ai_client.get_summary_list() if self.summary_enabled else None
