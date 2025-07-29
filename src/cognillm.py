@@ -200,10 +200,10 @@ class CogniLLM:
         """
 
         prompt = self.prompt_manager.get_message_prompt(user_message)
-        logger.debug("send_message")
         response, tokens_used = self.ai_client.send_message(prompt)
-        logger.debug("handle_message_add")
-        self.stage_manager.handle_message_add(response)
+
+        self.stage_manager.handle_message_add(user_message, response)
+
         # Clean up the response to minimize context length;
         # right now, it simply removes the chain_of_thought from the response.
         self._clean_response()

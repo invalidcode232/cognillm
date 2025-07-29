@@ -57,37 +57,35 @@ def main():
 
             if user_input.lower() == "info":
                 summary_info = cognillm.get_summary_info()
-                print("\nsummary system status:")
+                print("\nSummary system status:")
                 print(
-                    f"total conversation rounds: {summary_info['total_conversation_rounds']}"
+                    f"Total conversation rounds: {summary_info['total_conversation_rounds']}"
                 )
-                print(f"summaries created: {summary_info['summaries_count']}")
+                print(f"Summaries created: {summary_info['summaries_count']}")
                 print(
-                    f"rounds pending summary: {summary_info['conversation_rounds_pending']}"
+                    f"Rounds pending summary: {summary_info['conversation_rounds_pending']}"
                 )
-                print(f"window size: {summary_info['window_size']}")
-                print(f"start round threshold: {summary_info['start_round']}")
-                print(f"summary enabled: {summary_info['summary_enabled']}")
-                print()
+                print(f"Window size: {summary_info['window_size']}")
+                print(f"Start round threshold: {summary_info['start_round']}")
+                print(f"Summary enabled: {summary_info['summary_enabled']}")
                 continue
 
             if user_input.lower() == "history":
                 history = cognillm.get_conversation_history()
-                print("\nconversation history:")
+                print("\nConversation history:")
                 for message in history:
                     print(f"{message['role']}: {message['content']}")
-                print()
                 continue
 
             if not user_input:
                 continue
 
-            print(f"\nattempting round {round_count + 1}")
+            print(f"\nAttempting round {round_count + 1}")
 
             # Show summary info before processing
             summary_info = cognillm.get_summary_info()
             print(
-                f"before: {summary_info['total_conversation_rounds']} rounds, {summary_info['summaries_count']} summaries, {summary_info['conversation_rounds_pending']} pending"
+                f"Before: {summary_info['total_conversation_rounds']} rounds, {summary_info['summaries_count']} summaries, {summary_info['conversation_rounds_pending']} pending"
             )
 
             try:
@@ -98,12 +96,12 @@ def main():
 
                 # Show the AI response
                 print(f"AI: {message if message else 'No message in response'}")
-                print(f"tokens used: {tokens_used if tokens_used else 'N/A'}")
+                print(f"Tokens used: {tokens_used if tokens_used else 'N/A'}")
 
                 # Show updated summary info after processing
                 summary_info = cognillm.get_summary_info()
                 print(
-                    f"after: {summary_info['total_conversation_rounds']} rounds, {summary_info['summaries_count']} summaries, {summary_info['conversation_rounds_pending']} pending"
+                    f"After: {summary_info['total_conversation_rounds']} rounds, {summary_info['summaries_count']} summaries, {summary_info['conversation_rounds_pending']} pending"
                 )
 
                 # Show if we've reached the summary threshold
@@ -111,7 +109,6 @@ def main():
                     summary_info["total_conversation_rounds"]
                     >= summary_info["start_round"]
                 ):
-                    print("summary system is now active!")
                     if summary_info["summaries_count"] > 0:
                         print(
                             f"{summary_info['summaries_count']} summaries have been created"
@@ -121,15 +118,9 @@ def main():
                         summary_info["start_round"]
                         - summary_info["total_conversation_rounds"]
                     )
-                    print(f"{remaining} more rounds until summary system activates")
-
+                    print(f"{remaining} more rounds until summary system activates.")
             except Exception as e:
-                print("\n", "-" * 50)
-                print(f"error in round {round_count + 1}")
-                print(f"error: {e}")
-                # Note: round_count is not incremented here, so the failed attempt doesn't count
-
-            print("-" * 50)
+                print(f"error in round {round_count + 1}: {e}")
 
         except KeyboardInterrupt:
             print("\nGoodbye.")

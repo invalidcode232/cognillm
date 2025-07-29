@@ -71,10 +71,12 @@ class Evaluator:
             self.logger.error(f"Invalid JSON response: {response}")
             return None
 
+        self.logger.debug(f"Response: {response}")
+
         if not response.get("chain_of_thought"):
             self.logger.warning(f"No chain of thought in response: {response}")
 
-        if not response.get("result"):
+        if response.get("result") is None:
             self.logger.error(f"No result in response: {response}")
             return None
 
@@ -106,12 +108,16 @@ class Evaluator:
         History: {history_str}
         """
 
-        # self.logger.info(f"Evaluating objective completion: {eval_prompt}")
+        self.logger.debug(f"Evaluating objective completion: {eval_prompt}")
 
         ai_client = self.ai_clients[EvaluationMethods.OBJECTIVE_COMPLETION]
         response, _ = ai_client.send_message(eval_prompt)
 
+        self.logger.debug(f"Evaluation response: {response}")
+
         eval_result = self._get_eval_result(response)
+
+        self.logger.debug(f"Evaluation result: {eval_result}")
 
         # INFO: We are resetting this conversation in order to save context tokens
         # Since the clients are merely summarizers for the relevant message array(s),
