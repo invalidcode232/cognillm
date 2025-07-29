@@ -94,9 +94,7 @@ def main():
                 message, tokens_used = cognillm.send_message(user_input)
 
                 # Only increment round count if message was successfully processed
-                print("-" * 50)
                 round_count += 1
-                print(f"round {round_count} completed successfully")
 
                 # Show the AI response
                 print(f"AI: {message if message else 'No message in response'}")

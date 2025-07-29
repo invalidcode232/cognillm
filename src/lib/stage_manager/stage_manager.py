@@ -82,11 +82,20 @@ class StageManager:
             message (str): The message to add to the current stage.
         """
         # Add the message to the stage history
-        self.stage_history[self.current_stage]["messages"].append(message)
+        current_stage = self.stage_history[self.current_stage]
+        current_stage.append(
+            {
+                "id": self.current_message_index,
+                "role": "user",
+                "message": message,
+            }
+        )
         self.current_message_index += 1
 
+        self.logger.debug("Hi")
         # Evaluate the stage and advance the stage if the objective is completed
         result = self.evaluate_stage()
+        self.logger.debug("Hi2")
         if result is None:
             self.logger.error(
                 f"[StageManager] Invalid response from <Evaluator> for stage {self.current_stage}"
@@ -148,12 +157,16 @@ class StageManager:
         if evaluation_config.method == EvaluationMethods.OBJECTIVE_COMPLETION:
             result = self.evaluator.evaluate_objective_completion(
                 evaluation_config.data,
-                self.stage_history[self.current_stage]["messages"],
+                self.stage_history[self.current_stage][self.current_message_index][
+                    "message"
+                ],
             )
         elif evaluation_config.method == EvaluationMethods.TABLE_COMPARISON:
             result = self.evaluator.evaluate_table_comparison(
                 evaluation_config.data,
-                self.stage_history[self.current_stage]["messages"],
+                self.stage_history[self.current_stage][self.current_message_index][
+                    "message"
+                ],
             )
         else:
             raise ValueError(

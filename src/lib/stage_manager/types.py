@@ -96,6 +96,45 @@ class StageConfig:
     contemplation: Optional[EvaluationConfig]
     preparation: Optional[EvaluationConfig]
 
+    def __getitem__(self, stage: Stage) -> Optional[EvaluationConfig]:
+        """
+        Get the evaluation config for a specific stage.
+
+        Args:
+            stage (Stage): The stage to get the evaluation config for.
+
+        Returns:
+            Optional[EvaluationConfig]: The evaluation config for the stage, or None if not configured.
+
+        Raises:
+            KeyError: If the stage is not a valid Stage enum value.
+        """
+        stage_mapping = {
+            Stage.PRE_CONTEMPLATION: self.pre_contemplation,
+            Stage.CONTEMPLATION: self.contemplation,
+            Stage.PREPARATION: self.preparation,
+        }
+
+        if stage not in stage_mapping:
+            raise KeyError(f"Invalid stage: {stage}")
+
+        return stage_mapping[stage]
+
+    def __contains__(self, stage: Stage) -> bool:
+        """
+        Check if a stage is configured (has a non-None evaluation config).
+
+        Args:
+            stage (Stage): The stage to check.
+
+        Returns:
+            bool: True if the stage is configured, False otherwise.
+        """
+        try:
+            return self[stage] is not None
+        except KeyError:
+            return False
+
     def __len__(self) -> int:
         """
         Return the number of configured stages (non-None evaluation configs).
