@@ -5,6 +5,43 @@ import logging
 import json
 
 
+class AIClientError(Exception):
+    """Base exception class for AI client errors."""
+    pass
+
+
+class CompletionError(AIClientError):
+    """Exception raised fo        try:
+            # Send the conversation to Azure OpenAI and get the completion
+            completion = self.client.chat.completions.create(
+                model=self.completion_config.model,
+                messages=prompt,
+                max_tokens=self.completion_config.max_tokens,
+                temperature=self.completion_config.temperature,
+                top_p=self.completion_config.top_p,
+                frequency_penalty=self.completion_config.frequency_penalty,
+                presence_penalty=self.completion_config.presence_penalty,
+            )
+            
+            # Validate the completion response
+            self._validate_completion(completion)
+            
+        except ValidationError:
+            # Re-raise validation errors as-is
+            self._handle_api_error(Exception("Validation failed"), "Response validation")
+            raise
+        except Exception as e:
+            self._handle_api_error(e, "Chat completion")
+            # Wrap in our custom exception for consistency
+            raise CompletionError(f"Chat completion failed: {e}") from eed errors."""
+    pass
+
+
+class ValidationError(AIClientError):
+    """Exception raised for validation errors."""
+    pass
+
+
 class CompletionConfig:
     """
     Configuration container for Azure OpenAI chat completion parameters.
@@ -239,6 +276,37 @@ class Client:
 
         return prompt
 
+    def _validate_completion(self, completion) -> None:
+        """
+        Validate the completion response from Azure OpenAI.
+
+        Raises:
+            ValidationError: If the completion response is invalid or empty.
+        """
+        # Check if completion has received
+        if not completion.choices or not completion.choices[0].message.content:
+            error_msg = "Invalid completion response: No choices or empty content"
+            self.logger and self.logger.error(error_msg)
+            raise ValidationError(error_msg)
+
+    def _handle_api_error(self, error: Exception, operation: str = "API call") -> None:
+        """
+        Handle API errors with consistent logging and cleanup.
+        
+        Args:
+            error (Exception): The exception that occurred
+            operation (str): Description of the operation that failed
+        """
+        error_msg = f"{operation} failed: {error}"
+        self.logger and self.logger.error(error_msg)
+        
+        # Remove the last user message from chat prompt if API call fails
+        if self.chat_prompt and len(self.chat_prompt) > 1:
+            last_message = self.chat_prompt[-1]
+            if last_message.get("role") == "user":
+                self.chat_prompt.pop()
+                self.logger and self.logger.debug("Removed last user message from history due to error")
+
     def send_message(self, message: str) -> tuple[str, int | None]:
         """
         Send a message to the AI and return the response.
@@ -255,8 +323,8 @@ class Client:
                 and the total tokens used (or None if not available).
 
         Raises:
-            ValueError: If the API returns no completion choices or empty content.
-            Exception: If the API call fails due to network issues, authentication
+            ValidationError: If the API returns no completion choices or empty content.
+            CompletionError: If the API call fails due to network issues, authentication
                 problems, or other API errors.
 
         Example:
@@ -276,20 +344,29 @@ class Client:
 
         self.logger and self.logger.debug(f"Prompt:\n {json.dumps(prompt, indent=2)}")
 
-        # Send the conversation to Azure OpenAI and get the completion
-        completion = self.client.chat.completions.create(
-            model=self.completion_config.model,
-            messages=prompt,
-            max_tokens=self.completion_config.max_tokens,
-            temperature=self.completion_config.temperature,
-            top_p=self.completion_config.top_p,
-            frequency_penalty=self.completion_config.frequency_penalty,
-            presence_penalty=self.completion_config.presence_penalty,
-        )
-
-        # Validate that we received a proper response
-        if not completion.choices or not completion.choices[0].message.content:
-            raise ValueError("No completion choices returned")
+        try:
+            # Send the conversation to Azure OpenAI and get the completion
+            completion = self.client.chat.completions.create(
+                model=self.completion_config.model,
+                messages=prompt,
+                max_tokens=self.completion_config.max_tokens,
+                temperature=self.completion_config.temperature,
+                top_p=self.completion_config.top_p,
+                frequency_penalty=self.completion_config.frequency_penalty,
+                presence_penalty=self.completion_config.presence_penalty,
+            )
+            
+            # Validate the completion response
+            self._validate_completion(completion)
+            
+        except ValidationError:
+            # Re-raise validation errors as-is
+            self._handle_api_error(Exception("Validation failed"), "Response validation")
+            raise
+        except Exception as e:
+            self._handle_api_error(e, "Chat completion")
+            # Wrap in our custom exception for consistency
+            raise CompletionError(f"Chat completion failed: {e}") from e
 
         # Add assistant response to history
         assistant_response = completion.choices[0].message.content
