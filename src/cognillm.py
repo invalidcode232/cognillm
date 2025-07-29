@@ -5,7 +5,7 @@ from .lib.base.ai import Client
 from .lib.stage_manager import StageManager
 from .prompt_manager import PromptManager
 from .logger_config import setup_logger
-from .lib.stage_manager import Stage
+from .lib.stage_manager import Stage, StageConfig
 
 
 # Configuration constants
@@ -115,6 +115,19 @@ class CogniLLM:
             summary_start_round=summary_start_round,
             profile_path=profile_path,
             logger=logger,
+        )
+
+        self.stage_config: StageConfig = self.prompt_manager.get_stage_config()
+
+        self.stage_manager: StageManager = StageManager(
+            endpoint=endpoint,
+            deployment=deployment,
+            api_key=api_key,
+            api_version=api_version,
+            stage_config=self.stage_config,
+            logger=logger,
+            initial_stage=Stage.PRE_CONTEMPLATION,
+            message_index=0,
         )
 
         logger.info(f"Initialized <CogniLLM> successfully")

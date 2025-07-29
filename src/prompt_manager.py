@@ -1,6 +1,12 @@
 import os
 import json
 import yaml
+from .lib.stage_manager.types import (
+    StageConfig,
+    EvaluationConfig,
+    EvaluationMethods,
+    TableData,
+)
 
 
 # Path to prompt we use to establish the base AI logic
@@ -39,6 +45,101 @@ class PromptManager:
 
         return profile
 
+    @staticmethod
+    def _validate_stage_config(config: dict) -> StageConfig:
+        """
+        Validates and parses the stage configuration data.
+
+        Args:
+            config (dict): The config dictionary containing stage configurations.
+
+        Returns:
+            StageConfig: The validated stage configuration object.
+
+        Raises:
+            ValueError: If the stage configuration is invalid.
+        """
+        stage_configs = {}
+
+        for stage_name in ["pre_contemplation", "contemplation", "preparation"]:
+            if stage_name in config:
+                stage_data = config[stage_name]
+
+                if not isinstance(stage_data, dict):
+                    raise ValueError(f"Stage {stage_name} must be a dictionary")
+
+                if "type" not in stage_data:
+                    raise ValueError(f"Stage {stage_name} must have a 'type' field")
+
+                evaluation_type = stage_data["type"]
+
+                if evaluation_type == "objective_completion":
+                    if "objectives" not in stage_data:
+                        raise ValueError(
+                            f"Stage {stage_name} with objective_completion type must have 'objectives' field"
+                        )
+
+                    objectives = stage_data["objectives"]
+                    if not isinstance(objectives, list) or not all(
+                        isinstance(obj, str) for obj in objectives
+                    ):
+                        raise ValueError(
+                            f"Objectives in stage {stage_name} must be a list of strings"
+                        )
+
+                    stage_configs[stage_name] = EvaluationConfig.from_objectives(
+                        objectives
+                    )
+
+                elif evaluation_type == "table_comparison":
+                    if "default_table" not in stage_data:
+                        raise ValueError(
+                            f"Stage {stage_name} with table_comparison type must have 'default_table' field"
+                        )
+
+                    table_data = stage_data["default_table"]
+                    if not isinstance(table_data, dict):
+                        raise ValueError(
+                            f"default_table in stage {stage_name} must be a dictionary"
+                        )
+
+                    if "costs" not in table_data or "rewards" not in table_data:
+                        raise ValueError(
+                            f"default_table in stage {stage_name} must have 'costs' and 'rewards' fields"
+                        )
+
+                    costs = table_data["costs"]
+                    rewards = table_data["rewards"]
+
+                    if not isinstance(costs, list) or not all(
+                        isinstance(cost, str) for cost in costs
+                    ):
+                        raise ValueError(
+                            f"Costs in stage {stage_name} must be a list of strings"
+                        )
+
+                    if not isinstance(rewards, list) or not all(
+                        isinstance(reward, str) for reward in rewards
+                    ):
+                        raise ValueError(
+                            f"Rewards in stage {stage_name} must be a list of strings"
+                        )
+
+                    stage_configs[stage_name] = EvaluationConfig.from_table(
+                        costs, rewards
+                    )
+
+                else:
+                    raise ValueError(
+                        f"Unknown evaluation type '{evaluation_type}' in stage {stage_name}"
+                    )
+
+        return StageConfig(
+            pre_contemplation=stage_configs.get("pre_contemplation"),
+            contemplation=stage_configs.get("contemplation"),
+            preparation=stage_configs.get("preparation"),
+        )
+
     def __init__(self, profile_path: str) -> str:
         """
         Retrieves the main CogniLLM prompt and replaces dynamic variables with the provided values.
@@ -76,6 +177,19 @@ class PromptManager:
         # 2) Process config.yaml --
         # Validate and parse config.yaml
         self.config = self._validate_config(profile_data["config.yaml"])
+
+        # 3) Process stage configuration --
+        # Validate and create stage config from the loaded config
+        self.stage_config = self._validate_stage_config(self.config)
+
+    def get_stage_config(self) -> StageConfig:
+        """
+        Returns the stage config of the profile.
+
+        Returns:
+            StageConfig: The stage configuration object containing evaluation configs for each stage.
+        """
+        return self.stage_config
 
     def get_base_prompt(self) -> str:
         """
