@@ -1,7 +1,9 @@
 from openai.types.chat import ChatCompletionMessageParam
 from openai import AzureOpenAI
 from .memory.summary import SummaryBasedMemory
+from .memory.prompt_handle import generate_summary_prompt
 import logging
+import json
 
 
 class CompletionConfig:
@@ -192,64 +194,25 @@ class Client:
         if not self.summary_enabled or not self.summary_memory:
             return self.chat_prompt
 
-        # Calculate the number of conversation rounds (excluding system message)
-        # Each round = 1 user message + 1 assistant message = 2 messages
-        conversation_rounds = (len(self.chat_prompt) - 1) // 2
-
-        # If we haven't reached the start round threshold, use history directly
-        if conversation_rounds < self.summary_start_round:
-            return self.chat_prompt
-
-        # Calculate available summaries
-        available_summaries = len(self.summary_memory.summary_list)
-        required_summaries = (
-            conversation_rounds - self.summary_start_round
-        ) // self.summary_window_size + 1
-
-        # If no summaries are available yet, return original history
-        if available_summaries == 0:
-            return self.chat_prompt
-
-        # Start building the prompt with system message
-        prompt = [self.chat_prompt[0]]
-
-        # Add summaries for the earliest windows only
-        for summary_idx in range(min(available_summaries, required_summaries)):
-            start_round = summary_idx * self.summary_window_size + 1
-            end_round = (summary_idx + 1) * self.summary_window_size
-
-            # Access the summary content from the summary dictionary
-            summary = self.summary_memory.summary_list[summary_idx]
-            prompt.append(
-                {
-                    "role": "assistant",
-                    "content": f"Previous conversation summary (rounds {start_round}-{end_round}): {summary}",
-                }
-            )
-
-        # Calculate the starting index for remaining unsummarized history
-        # Start from: 1 (system) + (available_summaries * summary_window_size * 2) messages
-        summarized_messages = required_summaries * self.summary_window_size * 2
-        remaining_start_index = 1 + summarized_messages
-
-        # Add all remaining unsummarized conversation history
-        if remaining_start_index < len(self.chat_prompt):
-            prompt.extend(self.chat_prompt[remaining_start_index:])
-
-        return prompt
+        return generate_summary_prompt(
+            summary_memory=self.summary_memory,
+            summary_start_round=self.summary_start_round,
+            summary_window_size=self.summary_window_size,
+            chat_prompt=self.chat_prompt,
+        )
 
     def _validate_completion(self, completion) -> None:
         """
         Validate the completion response from Azure OpenAI.
 
         Raises:
-            ValidationError: If the completion response is invalid or empty.
+            ValueError: If the completion response is invalid or empty.
         """
         # Check if completion has received
         if not completion.choices or not completion.choices[0].message.content:
             error_msg = "Invalid completion response: No choices or empty content"
             self.logger and self.logger.error(error_msg)
-            raise Exception(error_msg)
+            raise ValueError(error_msg)
 
     def _handle_api_error(self, error: Exception, operation: str = "API call") -> None:
         """
@@ -287,9 +250,8 @@ class Client:
                 and the total tokens used (or None if not available).
 
         Raises:
-            ValidationError: If the API returns no completion choices or empty content.
-            CompletionError: If the API call fails due to network issues, authentication
-                problems, or other API errors.
+            ValueError: If the API returns no completion choices or empty content.
+            Exception: If an unexpected error occurs during the API call, including timeouts or output filtering.
 
         Example:
             >>> response, tokens = client.send_message("What is machine learning?")
@@ -320,9 +282,18 @@ class Client:
                 presence_penalty=self.completion_config.presence_penalty,
             )
 
+            # Validate the completion response
+            self._validate_completion(completion)
+
+        except ValueError:
+            # Handle validation errors specifically
+            self._handle_api_error(Exception("Validation failed"), "Response validation")
+            raise
         except Exception as e:
-            self.logger and self.logger.error(f"Chat completion failed: {e}")
-            raise Exception(f"Chat completion failed: {e}") from e
+            # Handle any other unexpected errors
+            self._handle_api_error(e, "Chat completion")
+            raise Exception(f"Unexpected error during chat completion: {e}") from e
+
 
         # Add assistant response to history
         assistant_response = completion.choices[0].message.content
