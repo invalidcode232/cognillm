@@ -35,7 +35,14 @@ class Stage(Enum):
 
 class EvaluationMethods(Enum):
     """
-    The evaluation methods.
+    The evaluation methods for the stage manager,
+    this evaluation method is used to determine
+    if the stage (in the Motivational Interviewing framework) should be advanced.
+
+    The evaluation methods are:
+    - OBJECTIVE_COMPLETION: The user's response is evaluated against a list of objectives,
+        and completed when all the objectives are deemed to be met.
+    - TABLE_COMPARISON: The user's response is evaluated against a table of costs and rewards.
     """
 
     OBJECTIVE_COMPLETION = "objective_completion"

@@ -294,6 +294,7 @@ class Client:
             self._handle_api_error(e, "Chat completion")
             raise Exception(f"Unexpected error during chat completion: {e}") from e
 
+
         # Add assistant response to history
         assistant_response = completion.choices[0].message.content
 
