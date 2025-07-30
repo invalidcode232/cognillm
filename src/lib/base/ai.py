@@ -2,47 +2,6 @@ from openai.types.chat import ChatCompletionMessageParam
 from openai import AzureOpenAI
 from .memory.summary import SummaryBasedMemory
 import logging
-import json
-
-
-class AIClientError(Exception):
-    """Base exception class for AI client errors."""
-
-    pass
-
-
-class CompletionError(AIClientError):
-    """Exception raised fo        try:
-        # Send the conversation to Azure OpenAI and get the completion
-        completion = self.client.chat.completions.create(
-            model=self.completion_config.model,
-            messages=prompt,
-            max_tokens=self.completion_config.max_tokens,
-            temperature=self.completion_config.temperature,
-            top_p=self.completion_config.top_p,
-            frequency_penalty=self.completion_config.frequency_penalty,
-            presence_penalty=self.completion_config.presence_penalty,
-        )
-
-        # Validate the completion response
-        self._validate_completion(completion)
-
-    except ValidationError:
-        # Re-raise validation errors as-is
-        self._handle_api_error(Exception("Validation failed"), "Response validation")
-        raise
-    except Exception as e:
-        self._handle_api_error(e, "Chat completion")
-        # Wrap in our custom exception for consistency
-        raise CompletionError(f"Chat completion failed: {e}") from eed errors."""
-
-    pass
-
-
-class ValidationError(AIClientError):
-    """Exception raised for validation errors."""
-
-    pass
 
 
 class CompletionConfig:
@@ -290,7 +249,7 @@ class Client:
         if not completion.choices or not completion.choices[0].message.content:
             error_msg = "Invalid completion response: No choices or empty content"
             self.logger and self.logger.error(error_msg)
-            raise ValidationError(error_msg)
+            raise Exception(error_msg)
 
     def _handle_api_error(self, error: Exception, operation: str = "API call") -> None:
         """
@@ -361,18 +320,9 @@ class Client:
                 presence_penalty=self.completion_config.presence_penalty,
             )
 
-            # Validate the completion response
-            self._validate_completion(completion)
-        except ValidationError:
-            # Re-raise validation errors as-is
-            self._handle_api_error(
-                Exception("Validation failed"), "Response validation"
-            )
-            raise
         except Exception as e:
-            self._handle_api_error(e, "Chat completion")
-            # Wrap in our custom exception for consistency
-            raise CompletionError(f"Chat completion failed: {e}") from e
+            self.logger and self.logger.error(f"Chat completion failed: {e}")
+            raise Exception(f"Chat completion failed: {e}") from e
 
         # Add assistant response to history
         assistant_response = completion.choices[0].message.content

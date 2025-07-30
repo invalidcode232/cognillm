@@ -70,6 +70,8 @@ class Evaluator:
         except json.JSONDecodeError:
             self.logger.error(f"Invalid JSON response: {response}")
             return None
+        except Exception as e:
+            raise Exception(f"Unknown error parsing response: {e}")
 
         self.logger.debug(f"Response: {response}")
 
@@ -96,24 +98,30 @@ class Evaluator:
             bool | None: True if the objective is completed, False otherwise, will return None if the response is invalid.
         """
 
+        eval_obj = {
+            "objective": objective,
+            "history": history,
+        }
+
         try:
-            objective_str = json.dumps(objective)
-            history_str = json.dumps(history)
+            eval_obj = json.dumps(eval_obj)
+        except json.JSONDecodeError:
+            self.logger.error(
+                f"Error converting objective or history to string: {eval_obj}"
+            )
+
+            return None
         except Exception as e:
-            self.logger.error(f"Error converting objective or history to string: {e}")
-            raise ValueError(f"Error converting objective or history to string: {e}")
+            raise Exception(
+                f"Unknown error converting objective or history to string: {e}"
+            )
 
-        eval_prompt = f"""
-        Objective: {objective_str}
-        History: {history_str}
-        """
-
-        self.logger.debug(f"Evaluating objective completion: {eval_prompt}")
+        self.logger.debug(f"Evaluating objective completion: {eval_obj}")
 
         ai_client = self.ai_clients[EvaluationMethods.OBJECTIVE_COMPLETION]
-        response, _ = ai_client.send_message(eval_prompt)
+        response, _ = ai_client.send_message(eval_obj)
 
-        self.logger.debug(f"Evaluation response: {response}")
+        # self.logger.debug(f"Evaluation response: {response}")
 
         eval_result = self._get_eval_result(response)
 

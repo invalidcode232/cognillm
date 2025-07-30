@@ -56,11 +56,6 @@ class StageManager:
 
         # Stage tracking
         self.stage_history = {
-            # initial_stage: {
-            #     "start": self.current_message_index,
-            #     "end": -1,
-            #     "messages": [],
-            # }
             # initial_stage: [
             #     {
             #         "id": "...",
@@ -86,14 +81,12 @@ class StageManager:
         current_stage = self.stage_history[self.current_stage]
         current_stage.append(
             {
-                "id": self.current_message_index,
                 "role": "user",
                 "message": user_message,
             }
         )
         current_stage.append(
             {
-                "id": self.current_message_index,
                 "role": "assistant",
                 "message": response,
             }
