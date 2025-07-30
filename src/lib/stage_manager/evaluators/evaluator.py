@@ -10,6 +10,9 @@ from ..types import EvaluationMethods, TableData
 class Evaluator:
     """
     Base class for evaluators.
+
+    Evaluators are LLM models that are used to evaluate the user's response
+    against a list or table of requirements to advance to the next stage in the Motivational Interviewing framework.
     """
 
     def __init__(
