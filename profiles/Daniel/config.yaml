@@ -1,0 +1,45 @@
+pre_contemplation:
+  type: "objective_completion"
+  objectives:
+    - "Establish trust by acknowledging Daniel's difficult circumstances without judgment. Validate his feelings of being trapped by the system while gently exploring how he currently handles problems. Daniel should demonstrate understanding of poverty and systemic barriers."
+    - "Carefully explore Daniel's worldview about survival and fairness. Ask open-ended questions about his experiences with honesty vs deception, focusing on understanding rather than challenging. Avoid triggering defensive responses by framing questions as curiosity about his perspective."
+    - "Guide Daniel to share specific examples of when lying helped or hurt him, using reflective listening to help him recognize patterns. The AI should respond with empathy and avoid any language that sounds like lecturing or moral judgment."
+    - "Help Daniel identify some concrete negative consequence of deception from his own experience (lost relationships, increased stress, or missed opportunities for real help). Frame this as his own insight rather than external criticism."
+contemplation:
+  type: "table_comparison"
+  default_table:
+    costs:
+      - "Might not get the money I need for immediate problems if I change"
+      - "People might reject me if I tell the truth about my situation"
+      - "If I become honest, I have to face my real problems instead of avoiding them"
+      - "Being honest might lose the little control I feel I have over my life"
+      - "If I change, I have to admit I was wrong and face shame"
+      - "If I keep lying, I will lose trust from people who care about me"
+      - "Continuing to lie means living with constant stress and guilt"
+      - "If I don't change, my problems keep getting worse instead of better"
+      - "Staying the same means feeling trapped in a cycle of deception"
+      - "If I keep lying, I'm missing out on real help and support"
+    rewards:
+      - "If I change, I could build real relationships based on trust"
+      - "Being honest means I might find actual solutions to my problems"
+      - "If I become honest, I'll feel better about myself and reduce guilt"
+      - "Changing would help me get appropriate help for my real situation"
+      - "If I change, I can break free from the exhausting cycle of lies"
+      - "If I keep lying, I get immediate money or resources when I need them"
+      - "Continuing to lie means I avoid facing painful truths about my situation"
+      - "If I don't change, I maintain the image that I'm in control"
+      - "Staying the same means I don't have to deal with people's disappointment"
+      - "If I keep lying, I can keep using the survival strategy I know works sometimes"
+  # type: "objective_completion"
+  # objectives:
+  #   - "Guide Daniel through a structured exploration of the pros and cons of continuing his deceptive behavior versus being more honest. Use his own language and examples to populate each side of the comparison. Avoid pushing him toward any particular conclusion and let him weigh the factors himself."
+  #   - "Encourage Daniel to voice his specific fears about changing his approach to handling problems. Focus on understanding his concerns about vulnerability, loss of control, and potential negative outcomes. Validate that these fears make sense given his experiences with poverty and systemic barriers."
+  #   - "Help Daniel articulate both the short-term benefits he gets from lying (immediate resources, avoiding difficult conversations, maintaining control) and the long-term costs (lost relationships, increased stress, missed opportunities for genuine help). Let him determine the relative importance of each factor without judgment."
+  #   - "Create space for Daniel to express his ambivalence and uncertainty about change. Normalize the internal conflict between wanting things to be different and fearing the risks of changing his survival strategies. Avoid rushing him toward a decision and acknowledge that being unsure is natural and acceptable."
+preparation:
+  type: "objective_completion"
+  objectives:
+    - "Collaborate with Daniel to identify one specific, small behavioral change he's willing to try (e.g., being honest about one minor issue). Frame this as an experiment rather than a permanent commitment. Ensure the goal feels achievable and doesn't threaten his sense of survival."
+    - "Work together to develop a concrete action plan for addressing his immediate financial crisis through legitimate means. This should include identifying specific resources, services, or support systems he could access. Break down the plan into small, manageable steps."
+    - "Help Daniel anticipate and prepare for potential challenges when trying honest approaches. Role-play or discuss how he might handle situations where honesty feels risky. Provide him with alternative phrases or strategies he can use."
+    - "Secure Daniel's commitment to attempt the agreed-upon plan for a specific timeframe (e.g., one week). Establish how progress will be measured and when you'll check in. Make sure he understands this is about testing new strategies, not abandoning all survival skills."

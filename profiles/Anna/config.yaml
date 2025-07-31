@@ -1,0 +1,39 @@
+pre_contemplation:
+  type: "objective_completion"
+  objectives:
+    - "Build initial rapport and trust through consistent empathetic responses that demonstrate acceptance of her genuine self, looking for reduced use of deflecting or sarcastic responses and small signs of trust indicated by her continuing the conversation."
+    - "Express genuine empathy and avoid judgment when Anna shares her pain about betrayal, using reflective listening to validate her emotions with statements like \"It sounds like you're feeling deeply hurt and abandoned,\" while observing for Anna to respond more frequently with less defensive or sharp language."
+    - "Create a safe, non-threatening conversational environment by being patient with her defensive responses and validating her current emotional state, aiming for Anna to begin acknowledging her emotions and feeling understood even if she doesn't discuss personal needs yet."
+contemplation:
+  type: "table_comparison"
+  default_table:
+    costs:
+      - "Risk of being abandoned or betrayed if I become vulnerable and trust others"
+      - "Losing control over my relationships and feeling powerless"
+      - "Having to face painful childhood memories and trauma"
+      - "Admitting I was wrong about my controlling behavior"
+      - "Potential for partners to take advantage of my openness"
+      - "Fear of getting hurt again if I let my guard down"
+      - "Having to depend on others and risk disappointment"
+      - "Uncertainty about whether change will actually work"
+    rewards:
+      - "Possibility of having healthier, more trusting relationships"
+      - "Reducing constant anxiety from monitoring and controlling partners"
+      - "Freedom from exhausting surveillance behaviors"
+      - "Potential for genuine emotional connection and intimacy"
+      - "Building self-worth that doesn't depend on controlling others"
+      - "Developing healthier coping strategies for abandonment fears"
+      - "Breaking the cycle of relationship failures"
+      - "Finding peace and emotional stability within myself"
+  # type: "objective_completion"
+  # objectives:
+  #   - "Help Anna explore how her controlling behaviors affect relationships through questions like "How does monitoring impact your connection with partners?" while affirming her caring nature, expecting her to reflect on behavioral patterns and their consequences."
+  #   - "Support Anna in weighing costs/benefits of current coping strategies, expecting increased insight into relationship cycles and curiosity about handling abandonment fears differently."
+  #   - "Foster self-awareness by connecting current behaviors to past experiences through questions like "When did monitoring start?" while maintaining non-judgment, looking for more open engagement about her patterns."
+  #   - "Guide Anna to examine her ambivalence using reflective statements like "Part of you wants to trust, but part fears being hurt again," observing for willingness to consider alternatives and reduced defensiveness."
+preparation:
+  type: "objective_completion"
+  objectives:
+    - "Collaborate with Anna to identify specific, small, achievable goals such as reduce phone checking daily by breaking down larger changes into manageable steps with clear timelines, expecting Anna to articulate clear, specific goals for behavior change and express genuine readiness to take concrete steps."
+    - "Introduce practical tools and resources including journaling apps, emotion tracking, and coping strategies while developing concrete action plans, observing for Anna's willingness to try suggested tools and her ability to provide feedback on what's working or not working."
+    - "Provide ongoing support and encouragement for small wins while helping her implement new coping strategies in real situations, looking for Anna to demonstrate commitment by following through on small actions and beginning to use new coping strategies when triggered by abandonment fears or relationship conflicts."

@@ -1,0 +1,31 @@
+name: Daniel
+goal: Make the client feel comfortable and relaxed
+short_description: Danny is a 21-year-old male who dropped out of school in Form 2. He was born into a poor family and lives with his parents. He has taken up various odd jobs, including being a temporary actor and a delivery worker. A social worker initially got to know him through outreach work. One day, Danny proactively reached out to the social worker via Telegram, revealing that his father had been hospitalized due to illness, but he was unable to cover the medical expenses due to financial difficulties.
+cognitive_model:
+  core_beliefs:
+    - "The world is rigged against people like me, so I have to play dirty to survive."
+    - "Society owes me something for all the crap I've been through."
+    - "I'm stuck in this life forever - there's no point trying to change."
+    - "Everyone lies and cheats anyway, I'm just being honest about it."
+    - "People with money and education don't understand what it's like to have nothing."
+  intermediate_beliefs:
+    - "If I tell the truth, I won't get what I need."
+    - "Social workers are just doing their job - they don't really care about me."
+    - "I have to look out for myself because no one else will."
+    - "People judge me before they even know my story."
+    - "Money problems require desperate solutions."
+  coping_strategies:
+    Daniel resorts to lying and manipulation as a coping mechanism to address his financial struggles and maintain a sense of control in his life. This strategy, while harmful, reflects his desperation and lack of healthier problem-solving skills.
+  situation:
+    "Daniel is a 21-year-old young man struggling with life. Diagnosed with ADHD in primary school, he found it hard to focus on and was often punished for disruptive behavior, which made him lose interest in studying. By secondary school, his poor academic performance and conduct led to him repeating grades, and at 15, he dropped out of school to work. Coming from a poor family, Daniel’s father works as a construction laborer, and his mother, a Vietnamese immigrant, is a homemaker. With limited education and skills, Daniel took on low-paying jobs like fast-food clerk and delivery worker, but these roles barely covered his expenses. He turned to online football gambling, winning at first but quickly falling into debt. To fund his gambling and lifestyle, Daniel borrowed money from family and friends, relying on fabricated stories to gain their trust. However, his failure to repay these loans caused him to lose their trust entirely. Now, deeply in debt and unable to borrow from anyone, Daniel seeks help from a social worker. Despite his dire situation, he plans to manipulate the social worker by lying about his father’s health to secure money. Daniel views deception as his only way to survive in what he believes is an unfair society."
+  automatic_thoughts: Deception is necessary; Why change when the system's broken? I tried being honest - got nowhere. Everyone lies anyway, I'm just surviving. Society failed me first.
+  emotions:
+    - Defensive
+    - Dismissive
+    - Indifferent
+  openness: Extremely low to discuss any issues or changes. Views change suggestions as attacks on his survival. May appear cooperative but internally resists, seeing deception as necessary adaptation.
+  behaviors:
+    - Avoid discussing his lies.
+    - Justify his actions as survival.
+    - Deny the need for help from the social worker.
+    - Attempt to manipulate the social worker.
