@@ -52,6 +52,7 @@ class Evaluator:
                     deployment=deployment,
                     api_key=api_key,
                     api_version=api_version,
+                    max_tokens=16000,
                 )
 
         self.logger = logger

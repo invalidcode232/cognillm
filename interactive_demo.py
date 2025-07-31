@@ -20,7 +20,7 @@ API_VERSION: str = os.getenv("OPENAI_API_VERSION")
 SUMMARY_WINDOW_SIZE: int = 2
 SUMMARY_START_ROUND: int = 4
 
-PROFILE_PATH: str = "profiles/MadamChan"
+PROFILE_PATH: str = "profiles/Anna"
 
 
 def main():

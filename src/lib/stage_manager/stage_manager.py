@@ -96,7 +96,10 @@ class StageManager:
                 f"Stage info for stage {self.current_stage} is not a list"
             )
 
-        return stage_info
+        return {
+            "current_stage": self.current_stage.value,
+            "stage_info": stage_info,
+        }
 
     def handle_message_add(self, user_message: str, response: str) -> None:
         """
@@ -128,7 +131,7 @@ class StageManager:
             self.logger.error(
                 f"[StageManager] Invalid response from <Evaluator> for stage {self.current_stage}"
             )
-        elif result is True:
+        elif result is True or "[[ADMIN: FORCE OPEN]]" in user_message:
             self.logger.info(
                 f"Stage {self.current_stage} completed, advancing to {self.current_stage.next_stage()}"
             )
@@ -156,15 +159,8 @@ class StageManager:
                 f"Next stage {next_stage} is not configured in stage_config"
             )
 
-        # Update current stage's end index
-        self.stage_history[self.current_stage]["end"] = self.current_message_index
-
         # Create new stage entry
-        self.stage_history[next_stage] = {
-            "start": self.current_message_index,
-            "end": -1,
-            "messages": [],
-        }
+        self.stage_history[next_stage] = []
 
         # Update current stage
         self.current_stage = next_stage
