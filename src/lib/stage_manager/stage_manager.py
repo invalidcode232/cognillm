@@ -183,7 +183,7 @@ class StageManager:
         evaluation_config = self.stage_config[self.current_stage]
 
         self.logger.debug(
-            f"Evaluating stage {self.current_stage} with evaluation config: {evaluation_config}"
+            f"Evaluating stage {self.current_stage} with evaluation type: {evaluation_config.method}"
         )
 
         current_stage_history = self.stage_history[self.current_stage]

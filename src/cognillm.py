@@ -130,7 +130,7 @@ class CogniLLM:
             message_index=0,
         )
 
-        logger.info(f"Initialized <CogniLLM> successfully")
+        logger.info(f"Initialized <CogniLLM> successfully | Deployment: {deployment}")
         logger.info(
             f"Summary will start after {summary_start_round} conversation rounds"
         )
@@ -198,6 +198,8 @@ class CogniLLM:
             >>> print(message)
             >>> print(tokens)
         """
+        if self.stage_manager.current_stage.is_final_stage:
+            raise ValueError("Conversation has already ended")
 
         stage_info = self.stage_manager.get_stage_info()
         prompt = self.prompt_manager.get_message_prompt(user_message, stage_info)
@@ -213,8 +215,7 @@ class CogniLLM:
         # Validates and parses the response
         parsed_response = self._parse_response(response)
         logger.debug(f"Parsed response:\n{json.dumps(parsed_response, indent=2)}")
-        logger.debug(f"Tokens used: {tokens_used}")
-        logger.debug("=" * 40)
+        logger.debug("=" * 15 + "[ END OF RESPONSE ]" + "=" * 15)
 
         return parsed_response.get("message"), tokens_used
 

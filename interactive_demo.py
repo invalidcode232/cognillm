@@ -88,6 +88,10 @@ def main():
                 f"Before: {summary_info['total_conversation_rounds']} rounds, {summary_info['summaries_count']} summaries, {summary_info['conversation_rounds_pending']} pending"
             )
 
+            if cognillm.stage_manager.current_stage.is_final_stage:
+                print("Conversation has already ended")
+                break
+
             try:
                 message, tokens_used = cognillm.send_message(user_input)
 

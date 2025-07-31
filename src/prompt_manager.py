@@ -229,7 +229,7 @@ class PromptManager:
             "user_message": user_message,
         }
 
-        return json.dumps(prompt_obj)
+        return json.dumps(prompt_obj, indent=2)
 
     def get_config(self) -> dict[str, str]:
         """
