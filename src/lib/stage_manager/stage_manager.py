@@ -1,4 +1,6 @@
 import logging
+import os
+import json
 from .types import Stage, EvaluationMethods, StageConfig
 from .evaluators import Evaluator
 
@@ -45,6 +47,24 @@ class StageManager:
         self.current_message_index = message_index
         self.logger = logger
 
+        # Get stage info (descriptions) from stages.json
+        stage_path = os.path.join(os.path.dirname(__file__), "include", "stages.json")
+        try:
+            with open(stage_path, "r") as f:
+                self.stage_info = json.load(f)
+        except FileNotFoundError:
+            self.logger.error(f"Stage info file not found at {stage_path}")
+            raise FileNotFoundError(f"Stage info file not found at {stage_path}")
+        except json.JSONDecodeError:
+            self.logger.error(f"Invalid JSON in stage info file at {stage_path}")
+            raise json.JSONDecodeError(
+                f"Invalid JSON in stage info file at {stage_path}"
+            )
+        except Exception as e:
+            raise Exception(
+                f"Unknown error loading stage info file at {stage_path}: {e}"
+            )
+
         # Used for checking if stage should be advanced
         self.evaluator = Evaluator(
             endpoint=endpoint,
@@ -55,20 +75,28 @@ class StageManager:
         )
 
         # Stage tracking
-        self.stage_history = {
-            # initial_stage: [
-            #     {
-            #         "id": "...",
-            #         "role": "user",
-            #         "message": "...",
-            #     }
-            # ]
-            initial_stage: []
-        }
+        self.stage_history = {initial_stage: []}
 
         self.logger.info(
             f"Initialized <StageManager> with {len(self.stage_config)} stages, starting at {initial_stage}, message index {message_index}"
         )
+
+    def get_stage_info(self) -> list[str]:
+        """
+        Returns the stage info for the current stage.
+        """
+        # Check if stage info exists
+        if self.current_stage.value not in self.stage_info:
+            raise ValueError(f"Stage info not found for stage {self.current_stage}")
+
+        stage_info = self.stage_info[self.current_stage.value]
+
+        if not isinstance(stage_info, list):
+            self.logger.warning(
+                f"Stage info for stage {self.current_stage} is not a list"
+            )
+
+        return stage_info
 
     def handle_message_add(self, user_message: str, response: str) -> None:
         """

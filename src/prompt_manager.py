@@ -1,17 +1,12 @@
 import os
 import json
 import yaml
-from .lib.stage_manager.types import (
-    StageConfig,
-    EvaluationConfig,
-    EvaluationMethods,
-    TableData,
-)
+from .lib.stage_manager.types import StageConfig, EvaluationConfig
 
 
 # Path to prompt we use to establish the base AI logic
 PROMPT_PATH = os.path.join(
-    os.path.dirname(__file__), "include", "prompts", "cognillm.txt"
+    os.path.dirname(__file__), "include", "prompts", "cognillm_a.txt"
 )
 
 
@@ -182,6 +177,16 @@ class PromptManager:
         # Validate and create stage config from the loaded config
         self.stage_config = self._validate_stage_config(self.config)
 
+    def override_cognillm_variable(self, variable: str, value: str) -> None:
+        """
+        Overrides a variable in the base AI prompt.
+        """
+        # Check if variable exists in the base prompt
+        if f"%{variable}%" not in self.base_prompt:
+            raise ValueError(f"Variable {variable} not found in base prompt")
+
+        return self.base_prompt.replace(f"%{variable}%", value)
+
     def get_stage_config(self) -> StageConfig:
         """
         Returns the stage config of the profile.
@@ -204,7 +209,7 @@ class PromptManager:
         """
         return self.base_prompt
 
-    def get_message_prompt(self, user_message: str) -> str:
+    def get_message_prompt(self, user_message: str, stage_info: list[str]) -> str:
         """
         Returns the prompt to respond to the user's message for every conversation.
 
@@ -218,7 +223,13 @@ class PromptManager:
             >>> prompt = PromptManager.get_message_prompt("Hello!")
             >>> print(prompt)
         """
-        return user_message
+        # return user_message
+        prompt_obj = {
+            "stage_info": stage_info,
+            "user_message": user_message,
+        }
+
+        return json.dumps(prompt_obj)
 
     def get_config(self) -> dict[str, str]:
         """

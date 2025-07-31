@@ -76,7 +76,7 @@ class Evaluator:
         except Exception as e:
             raise Exception(f"Unknown error parsing response: {e}")
 
-        self.logger.debug(f"Response: {response}")
+        self.logger.debug(f"Response: \n{json.dumps(response, indent=2)}")
 
         if not response.get("chain_of_thought"):
             self.logger.warning(f"No chain of thought in response: {response}")
@@ -119,12 +119,12 @@ class Evaluator:
                 f"Unknown error converting objective or history to string: {e}"
             )
 
-        self.logger.debug(f"Evaluating objective completion: {eval_obj}")
+        # self.logger.debug(f"Evaluating objective completion: {eval_obj}")
 
         ai_client = self.ai_clients[EvaluationMethods.OBJECTIVE_COMPLETION]
         response, _ = ai_client.send_message(eval_obj)
 
-        # self.logger.debug(f"Evaluation response: {response}")
+        self.logger.debug(f"Evaluation response: {response}")
 
         eval_result = self._get_eval_result(response)
 

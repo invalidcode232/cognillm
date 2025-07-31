@@ -199,7 +199,9 @@ class CogniLLM:
             >>> print(tokens)
         """
 
-        prompt = self.prompt_manager.get_message_prompt(user_message)
+        stage_info = self.stage_manager.get_stage_info()
+        prompt = self.prompt_manager.get_message_prompt(user_message, stage_info)
+        logger.debug(f"Prompt: \n{prompt}")
         response, tokens_used = self.ai_client.send_message(prompt)
 
         self.stage_manager.handle_message_add(user_message, response)
