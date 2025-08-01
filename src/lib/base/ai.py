@@ -101,6 +101,8 @@ class Client:
         summary_window_size: int = 5,
         summary_model: str = "openai",
         summary_start_round: int = 50,
+        summary_temp_history_list: list[ChatCompletionMessageParam] | None = None,
+        summary_list: list[str] | None = None,
         profile_path: str | None = None,
         logger: logging.Logger | None = None,
     ):
@@ -126,6 +128,8 @@ class Client:
             summary_window_size (int, optional): Number of rounds per summary window. Defaults to 5.
             summary_model (str, optional): Model to use for summarization. Defaults to "openai".
             summary_start_round (int, optional): Round number to start using summaries. Defaults to 50.
+            summary_temp_history_list (list[ChatCompletionMessageParam] | None, optional): Temporary history list for summaries. Defaults to None.
+            summary_list (list[str] | None, optional): List of summaries generated so far.
             profile_path (str | None, optional): Path to profile for summary system. Required if summary_enabled is True. Defaults to None.
 
         Raises:
@@ -167,6 +171,8 @@ class Client:
                 deployment=deployment,
                 api_key=api_key,
                 api_version=api_version,
+                summary_temp_history_list=summary_temp_history_list,
+                summary_list=summary_list,
             )
 
         self.chat_prompt: list[ChatCompletionMessageParam] = [
@@ -399,4 +405,15 @@ class Client:
         """
         if self.summary_enabled and self.summary_memory:
             return self.summary_memory.get_summary_list()
+        return None
+
+    def get_summary_temp_history_list(self) -> list[ChatCompletionMessageParam] | None:
+        """
+        Get the temporary history list used for summaries.
+
+        Returns:
+            list[ChatCompletionMessageParam] | None: Temporary history list, or None if summary is not enabled.
+        """
+        if self.summary_enabled and self.summary_memory:
+            return self.summary_memory.get_summary_temp_history_list()
         return None

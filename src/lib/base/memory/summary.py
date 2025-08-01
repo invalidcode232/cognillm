@@ -56,6 +56,8 @@ class CompletionConfig:
             top_p (float): Nucleus sampling parameter (0.0-1.0).
             frequency_penalty (float): Frequency penalty (-2.0 to 2.0).
             presence_penalty (float): Presence penalty (-2.0 to 2.0).
+            summary_temp_history_list (list[ChatCompletionMessageParam] | None, optional): Temporary history list for summaries. Defaults to None.
+            summary_list (list[str] | None, optional): List of summaries generated so far. Defaults to None.
         """
         self.model = model
         self.max_tokens = max_tokens
@@ -86,12 +88,12 @@ class SummaryBasedMemory:
         top_p: float = 0.95,
         frequency_penalty: float = 0,
         presence_penalty: float = 0,
+        summary_temp_history_list: list[ChatCompletionMessageParam] | None = None,
+        summary_list: list[str] | None = None,
     ):
         self.window_size: int = summary_window_size
-        self.history_list: list[ChatCompletionMessageParam] = (
-            []
-        )  # Now stores basic message dictionaries
-        self.summary_list: list[str] = []  # Now stores basic summary dictionaries
+        self.history_list: list[ChatCompletionMessageParam] = summary_temp_history_list if summary_temp_history_list is not None else []
+        self.summary_list: list[str] = summary_list if summary_list is not None else []
         self.system_prompt: str = get_summary_system_prompt(profile_path=profile_path)
         self.round_count: int = 0
 
@@ -188,11 +190,20 @@ class SummaryBasedMemory:
         if self.summary_signal():
             self.add_summary()
 
-    def get_summary_list(self) -> list[str]:
+    def get_summary_list(self) -> list[str] | None:
         """
         Returns the list of summaries.
 
         Returns:
             list[str]: The list of summaries.
         """
-        return self.summary_list if self.summary_list else []
+        return self.summary_list if self.summary_list else None
+    
+    def get_summary_temp_history_list(self) -> list[ChatCompletionMessageParam] | None:
+        """
+        Returns the temporary history list used for summaries.
+
+        Returns:
+            list[ChatCompletionMessageParam]: The temporary history list.
+        """
+        return self.history_list if self.history_list else None

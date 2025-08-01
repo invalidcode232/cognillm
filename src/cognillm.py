@@ -69,6 +69,8 @@ class CogniLLM:
         summary_window_size: int = 5,
         summary_model: str = "openai",
         summary_start_round: int = 50,
+        summary_temp_history_list: list[ChatCompletionMessageParam] | None = None,
+        summary_list: list[str] | None = None,
     ):
         """
         Initialize the CogniLLM roleplaying system.
@@ -86,6 +88,8 @@ class CogniLLM:
             summary_window_size (int): Number of rounds per summary window
             summary_model (str): Model to use for summarization
             summary_start_round (int): Round number to start using summaries
+            summary_temp_history_list (list[ChatCompletionMessageParam] | None): Temporary history list for summaries
+            summary_list (list[str] | None): List of summaries generated so far
         """
         self.history: list[ChatCompletionMessageParam] | None = history
         self.profile_path = profile_path
@@ -113,6 +117,8 @@ class CogniLLM:
             summary_window_size=summary_window_size,
             summary_model=summary_model,
             summary_start_round=summary_start_round,
+            summary_temp_history_list=summary_temp_history_list,
+            summary_list=summary_list,
             profile_path=profile_path,
             logger=logger,
         )
@@ -272,3 +278,13 @@ class CogniLLM:
         """
 
         return self.ai_client.get_summary_list() if self.summary_enabled else None
+
+    def get_summary_temp_history_list(self) -> list[ChatCompletionMessageParam] | None:
+        """
+        Get the temporary history list used for summaries.
+
+        Returns:
+            list[ChatCompletionMessageParam]: Temporary history list.
+        """
+
+        return self.ai_client.get_summary_temp_history_list() if self.summary_enabled else None
