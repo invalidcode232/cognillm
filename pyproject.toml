@@ -1,3 +1,7 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
 [project]
 name = "cognillm"
 version = "0.1.0"
@@ -10,4 +14,14 @@ dependencies = [
     "openai>=1.97.0",
     "python-dotenv>=1.1.1",
     "pyyaml>=6.0.2",
+]
+
+[tool.hatchling.build.targets.wheel]
+packages = ["src/cognillm"]
+
+[tool.hatchling.build.targets.sdist]
+include = [
+    "/src",
+    "/README.md",
+    "/pyproject.toml",
 ]
