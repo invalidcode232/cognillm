@@ -86,7 +86,7 @@ class Evaluator:
             self.logger.error(f"No result in response: {response}")
             return None
 
-        return response.get("result")
+        return response.get("result"), response.get("chain_of_thought")
 
     def evaluate_objective_completion(
         self, objective: List[str], history: list[ChatCompletionMessageParam]
@@ -120,23 +120,19 @@ class Evaluator:
                 f"Unknown error converting objective or history to string: {e}"
             )
 
-        # self.logger.debug(f"Evaluating objective completion: {eval_obj}")
+        self.logger.debug(f"Evaluating objective completion: {eval_obj}")
 
         ai_client = self.ai_clients[EvaluationMethods.OBJECTIVE_COMPLETION]
         response, _ = ai_client.send_message(eval_obj)
 
-        self.logger.debug(f"Evaluation response: {response}")
-
-        eval_result = self._get_eval_result(response)
-
-        self.logger.debug(f"Evaluation result: {eval_result}")
+        eval_result, eval_chain_of_thought = self._get_eval_result(response)
 
         # INFO: We are resetting this conversation in order to save context tokens
         # Since the clients are merely summarizers for the relevant message array(s),
         # we will not need the history anymore.
         ai_client.reset_conversation()
 
-        return eval_result
+        return eval_result, eval_chain_of_thought
 
     def evaluate_table_comparison(
         self, table: TableData, history: list[ChatCompletionMessageParam]
