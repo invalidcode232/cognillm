@@ -274,7 +274,7 @@ class Client:
         # Prepare the prompt based on summary settings
         prompt = self._prepare_prompt()
 
-        # self.logger and self.logger.debug(f"Prompt:\n {json.dumps(prompt, indent=2)}")
+        self.logger and self.logger.debug(f"Prompt:\n {json.dumps(prompt, indent=2)}")
 
         try:
             # Send the conversation to Azure OpenAI and get the completion
@@ -293,13 +293,14 @@ class Client:
 
         except ValueError:
             # Handle validation errors specifically
-            self._handle_api_error(Exception("Validation failed"), "Response validation")
+            self._handle_api_error(
+                Exception("Validation failed"), "Response validation"
+            )
             raise
         except Exception as e:
             # Handle any other unexpected errors
             self._handle_api_error(e, "Chat completion")
             raise Exception(f"Unexpected error during chat completion: {e}") from e
-
 
         # Add assistant response to history
         assistant_response = completion.choices[0].message.content

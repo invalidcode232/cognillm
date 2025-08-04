@@ -92,10 +92,11 @@ class SummaryBasedMemory:
         summary_list: list[str] | None = None,
     ):
         self.window_size: int = summary_window_size
-        self.history_list: list[ChatCompletionMessageParam] = summary_temp_history_list if summary_temp_history_list is not None else []
+        self.history_list: list[ChatCompletionMessageParam] = (
+            summary_temp_history_list if summary_temp_history_list is not None else []
+        )
         self.summary_list: list[str] = summary_list if summary_list is not None else []
         self.system_prompt: str = get_summary_system_prompt(profile_path=profile_path)
-        self.round_count: int = 0
 
         self.summary_tool = AzureOpenAI(
             azure_endpoint=endpoint,
@@ -112,27 +113,13 @@ class SummaryBasedMemory:
             presence_penalty=presence_penalty,
         )
 
-    def increase_round_count(self):
-        """
-        Increases the round count by 1.
-        This can be used to track the number of conversation rounds.
-        """
-        self.round_count += 1
-
-    def reset_round_count(self):
-        """
-        Resets the round count to 0.
-        This can be used to reset the conversation state.
-        """
-        self.round_count = 0
-
     def summary_signal(self):
         """
         Generates a summary signal based on the current history size as well as the summary window size.
         Returns:
             A boolean indicating whether the summary should be generated.
         """
-        return self.round_count >= self.window_size
+        return len(self.history_list) >= self.window_size * 2
 
     def add_to_history(self, history_item: ChatCompletionMessageParam):
         """
@@ -174,7 +161,10 @@ class SummaryBasedMemory:
 
         self.summary_list.append(summary)
         self._clear_history()
-        self.reset_round_count()
+        print(
+            "SDHJFJKSDHFKSDJHFSDHFAKSJDFH SUCCESSFUULLLY ADDED SUMMARY",
+            len(self.summary_list),
+        )
         return summary
 
     def update(self, history_items: list[ChatCompletionMessageParam]):
@@ -186,7 +176,6 @@ class SummaryBasedMemory:
         """
         for history_item in history_items:
             self.add_to_history(history_item)
-        self.increase_round_count()
         if self.summary_signal():
             self.add_summary()
 
@@ -197,8 +186,8 @@ class SummaryBasedMemory:
         Returns:
             list[str]: The list of summaries.
         """
-        return self.summary_list if self.summary_list else None
-    
+        return self.summary_list if self.summary_list else []
+
     def get_summary_temp_history_list(self) -> list[ChatCompletionMessageParam] | None:
         """
         Returns the temporary history list used for summaries.
