@@ -202,9 +202,14 @@ class StageManager:
             # Stage tracking
             self.stage_history = {initial_stage: []}
         else:
+            self.logger.info(
+                f"Existing history found with length {len(stage_history)} messages"
+            )
+
             processed_history, last_stage = self._process_existing_history(
                 stage_history
             )
+            self.logger.info(f"Processed history with length: {len(processed_history)}")
             self.stage_history = processed_history
 
             # If we have a valid last stage from history, update current_stage
