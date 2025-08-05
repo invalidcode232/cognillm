@@ -126,10 +126,8 @@ class CogniLLM:
             profile_path=profile_path,
             logger=logger,
         )
-        print("AI client initialized successfully", flush=True)
 
         self.stage_config: StageConfig = self.prompt_manager.get_stage_config()
-        print("Stage config retrieved successfully", flush=True)
 
         self.stage_manager: StageManager = StageManager(
             endpoint=endpoint,
@@ -139,9 +137,7 @@ class CogniLLM:
             stage_config=self.stage_config,
             logger=logger,
             initial_stage=Stage.PRE_CONTEMPLATION,
-            message_index=0,
         )
-        print("Stage manager initialized successfully", flush=True)
 
         logger.info(f"Initialized <CogniLLM> successfully | Deployment: {deployment}")
         logger.info(
@@ -216,7 +212,6 @@ class CogniLLM:
 
         stage_info = self.stage_manager.get_stage_info()
         prompt = self.prompt_manager.get_message_prompt(user_message, stage_info)
-        logger.debug(f"Prompt: \n{prompt}")
         response, tokens_used = self.ai_client.send_message(prompt)
 
         self.stage_manager.handle_message_add(user_message, response)
@@ -227,8 +222,6 @@ class CogniLLM:
 
         # Validates and parses the response
         parsed_response = self._parse_response(response)
-        logger.debug(f"Parsed response:\n{json.dumps(parsed_response, indent=2)}")
-        logger.debug("=" * 15 + "[ END OF RESPONSE ]" + "=" * 15)
 
         return parsed_response.get("message"), tokens_used
 

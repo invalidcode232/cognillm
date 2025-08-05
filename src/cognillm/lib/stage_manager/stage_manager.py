@@ -1,6 +1,7 @@
 import logging
 import os
 import json
+from openai.types.chat.chat_completion_message_param import ChatCompletionMessageParam
 from .types import Stage, EvaluationMethods, StageConfig
 from .evaluators import Evaluator
 
@@ -26,7 +27,7 @@ class StageManager:
         logger: logging.Logger,
         stage_config: StageConfig,
         initial_stage: Stage = Stage.PRE_CONTEMPLATION,
-        message_index: int = 0,
+        stage_history: dict[Stage, list[ChatCompletionMessageParam]] | None = None,
     ):
         """
         Initializes the stage manager.
@@ -44,7 +45,6 @@ class StageManager:
 
         self.stage_config = stage_config
         self.current_stage = initial_stage
-        self.current_message_index = message_index
         self.logger = logger
 
         # Get stage info (descriptions) from stages.json
@@ -74,11 +74,14 @@ class StageManager:
             logger=logger,
         )
 
-        # Stage tracking
-        self.stage_history = {initial_stage: []}
+        if stage_history is None:
+            # Stage tracking
+            self.stage_history = {initial_stage: []}
+        else:
+            self.stage_history = stage_history
 
         self.logger.info(
-            f"Initialized <StageManager> with {len(self.stage_config)} stages, starting at {initial_stage}, message index {message_index}"
+            f"Initialized <StageManager> with {len(self.stage_config)} stages, starting at {initial_stage}, stage history: {self.stage_history}"
         )
 
     def get_stage_info(self) -> list[str]:
@@ -123,8 +126,6 @@ class StageManager:
             }
         )
 
-        self.current_message_index += 2
-
         # Evaluate the stage and advance the stage if the objective is completed
         result = self.evaluate_stage()
         if result is None:
@@ -140,7 +141,6 @@ class StageManager:
     def advance_stage(self) -> bool:
         """
         Advances to the next stage in the progression.
-        Uses the internally tracked current_message_index.
 
         Returns:
             bool: True if stage was advanced successfully, False if already at final stage.
@@ -201,13 +201,6 @@ class StageManager:
             )
 
         return result
-
-    # def increment_message_index(self) -> None:
-    #     """
-    #     Increments the current message index without adding a message.
-    #     Useful when tracking message count without storing the actual messages.
-    #     """
-    #     self.current_message_index += 1
 
     # def can_advance(self) -> bool:
     #     """
