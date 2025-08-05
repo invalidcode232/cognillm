@@ -18,6 +18,130 @@ class StageManager:
     ... }
     """
 
+    def _process_existing_history(
+        self, history: list[ChatCompletionMessageParam]
+    ) -> tuple[dict[Stage, list[ChatCompletionMessageParam]], Stage | None]:
+        """
+        Processes the existing history:
+        - Converts a list of messages into a dictionary of messages by stage.
+        - Retrieves the last stage from the history
+
+        Expected format:
+        - First message: system prompt
+        - Then pairs: user message (with JSON containing user_message and stage_info) + assistant message
+        - Pattern: system-user-assistant-user-assistant-...
+
+        Args:
+            history: List of chat completion messages from existing session
+
+        Returns:
+            Tuple containing:
+            - Dictionary mapping stages to their message history
+            - Last stage encountered in the history (None if no valid stages found)
+
+        Raises:
+            ValueError: If history format is invalid or JSON parsing fails
+        """
+        if not history:
+            return {}, None
+
+        # Check if first message is system message
+        if len(history) == 0 or history[0].get("role") != "system":
+            raise ValueError("History must start with a system message")
+
+        # Initialize result dictionary and last stage tracker
+        stage_history = {}
+        last_stage = None
+
+        # Skip the system message and process user-assistant pairs
+        i = 1
+        while i < len(history):
+            # Check for user message
+            if i >= len(history) or history[i].get("role") != "user":
+                self.logger.warning(
+                    f"Expected user message at index {i}, got {history[i].get('role') if i < len(history) else 'end of history'}"
+                )
+
+            user_message = history[i]
+
+            # Parse the JSON content from user message
+            try:
+                message_content = user_message.get("content", "")
+                if not message_content:
+                    raise ValueError(f"User message at index {i} has empty content")
+
+                parsed_data = json.loads(message_content)
+
+                # Extract required fields with error checking
+                if "user_message" not in parsed_data:
+                    self.logger.warning(
+                        f"User message at index {i} missing 'user_message' field"
+                    )
+
+                if "stage_info" not in parsed_data:
+                    self.logger.warning(
+                        f"User message at index {i} missing 'stage_info' field"
+                    )
+
+                stage_info = parsed_data["stage_info"]
+                if not isinstance(stage_info, dict):
+                    self.logger.warning(
+                        f"User message at index {i}: 'stage_info' must be a dictionary"
+                    )
+
+                if "current_stage" not in stage_info:
+                    self.logger.warning(
+                        f"User message at index {i} missing 'current_stage' in stage_info"
+                    )
+
+                stage_str = stage_info["current_stage"]
+
+                # Convert string to Stage enum
+                try:
+                    stage = Stage(stage_str)
+                    last_stage = stage  # Track the last valid stage encountered
+                except ValueError:
+                    raise ValueError(
+                        f"Invalid stage '{stage_str}' at index {i}. Valid stages: {[s.value for s in Stage]}"
+                    )
+
+            except json.JSONDecodeError as e:
+                raise ValueError(f"Invalid JSON in user message at index {i}: {e}")
+
+            # Check for assistant message
+            if i + 1 >= len(history) or history[i + 1].get("role") != "assistant":
+                self.logger.warning(
+                    f"Expected assistant message at index {i + 1}, got {history[i + 1].get('role') if i + 1 < len(history) else 'end of history'}"
+                )
+
+            assistant_message = history[i + 1]
+
+            # Initialize stage in dictionary if not exists
+            if stage not in stage_history:
+                stage_history[stage] = []
+
+            # Create properly formatted messages for this stage (following handle_message_add format)
+            stage_history[stage].append(
+                {"role": "user", "message": parsed_data["user_message"]}
+            )
+
+            stage_history[stage].append(
+                {"role": "assistant", "message": assistant_message.get("content", "")}
+            )
+
+            self.logger.debug(
+                f"Processed message pair for stage {stage}: user_message='{parsed_data['user_message'][:50]}...'"
+            )
+
+            # Move to next pair
+            i += 2
+
+        self.logger.info(
+            f"Processed existing history: {len(history)} total messages into {len(stage_history)} stages"
+        )
+
+        return stage_history, last_stage
+
     def __init__(
         self,
         endpoint: str,
@@ -78,10 +202,17 @@ class StageManager:
             # Stage tracking
             self.stage_history = {initial_stage: []}
         else:
-            self.stage_history = stage_history
+            processed_history, last_stage = self._process_existing_history(
+                stage_history
+            )
+            self.stage_history = processed_history
+
+            # If we have a valid last stage from history, update current_stage
+            if last_stage is not None:
+                self.current_stage = last_stage
 
         self.logger.info(
-            f"Initialized <StageManager> with {len(self.stage_config)} stages, starting at {initial_stage}, stage history: {self.stage_history}"
+            f"Initialized <StageManager> with {len(self.stage_config)} stages, starting at {self.current_stage}, stage history: {self.stage_history}"
         )
 
     def get_stage_info(self) -> list[str]:
