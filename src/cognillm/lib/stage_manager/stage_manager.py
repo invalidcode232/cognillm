@@ -50,7 +50,7 @@ class StageManager:
             raise ValueError("History must start with a system message")
 
         # Initialize result dictionary and last stage tracker
-        stage_history = {}
+        stage_history = { stage: [] for stage in [Stage.PRE_CONTEMPLATION, Stage.CONTEMPLATION, Stage.PREPARATION]}
         last_stage = None
 
         # Skip the system message and process user-assistant pairs
@@ -198,23 +198,19 @@ class StageManager:
             logger=logger,
         )
 
-        if messages_history is None:
-            # Stage tracking
-            self.stage_history = {initial_stage: []}
-        else:
+        if messages_history is None or len(messages_history) <= 1: # Length of 1 indicates only system message, which is a new session
+            # For each stage, create an empty list
+            self.stage_history = {stage: [] for stage in [Stage.PRE_CONTEMPLATION, Stage.CONTEMPLATION, Stage.PREPARATION]}
+        else: # If previous session actually exists
             self.logger.debug(
                 f"Existing history found with length {len(messages_history)} messages"
             )
 
-            processed_history, last_stage = self._process_existing_history(
+            processed_history, _ = self._process_existing_history(
                 messages_history
             )
             self.logger.debug(f"Processed history with length: {len(processed_history)}")
             self.stage_history = processed_history
-
-            # If we have a valid last stage from history, update current_stage
-            if last_stage is not None:
-                self.current_stage = last_stage
 
         self.logger.info(
             f"Initialized <StageManager> with {len(self.stage_config)} stages, starting at {self.current_stage}, stage history: {self.stage_history}"
@@ -247,8 +243,17 @@ class StageManager:
         Args:
             message (str): The message to add to the current stage.
         """
+        # Get Stage from current_stage string
         # Add the message to the stage history
-        current_stage = self.stage_history[self.current_stage]
+        try:
+            current_stage = self.stage_history[Stage(self.current_stage.value)]
+        except KeyError:
+            self.logger.error(f"Stage {self.current_stage} not found in stage history")
+            raise KeyError(f"Stage {self.current_stage} not found in stage history")
+        except Exception as e:
+            self.logger.error(f"Error adding message to stage history: {e}")
+            raise Exception(f"Error adding message to stage history: {e}")
+
         current_stage.append(
             {
                 "role": "user",
@@ -295,11 +300,17 @@ class StageManager:
                 f"Next stage {next_stage} is not configured in stage_config"
             )
 
+        # Check if the next stage is already in the stage history
+        if next_stage in self.stage_history:
+            self.logger.warning(f"Next stage {next_stage} already in stage history, resetting stage history for current (next) stage: {next_stage}")
+
         # Create new stage entry
         self.stage_history[next_stage] = []
 
         # Update current stage
         self.current_stage = next_stage
+
+        self.logger.info(f"Advanced to stage {self.current_stage}")
 
         return True
 
@@ -337,16 +348,3 @@ class StageManager:
             )
 
         return result
-
-    # def can_advance(self) -> bool:
-    #     """
-    #     Checks if the current stage can be advanced to the next stage.
-
-    #     Returns:
-    #         bool: True if advancement is possible, False otherwise.
-    #     """
-    #     if self.current_stage.is_final_stage:
-    #         return False
-
-    #     next_stage = self.current_stage.next_stage()
-    #     return next_stage in self.stage_config

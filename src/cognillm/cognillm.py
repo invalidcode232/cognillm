@@ -71,6 +71,7 @@ class CogniLLM:
         summary_start_round: int = 50,
         summary_temp_history_list: list[ChatCompletionMessageParam] | None = None,
         summary_list: list[str] | None = None,
+        current_stage: Stage = Stage.PRE_CONTEMPLATION,
     ):
         """
         Initialize the CogniLLM roleplaying system.
@@ -90,6 +91,7 @@ class CogniLLM:
             summary_start_round (int): Round number to start using summaries
             summary_temp_history_list (list[ChatCompletionMessageParam] | None): Temporary history list for summaries
             summary_list (list[str] | None): List of summaries generated so far
+            current_stage (Stage): The current stage
         """
         self.history: list[ChatCompletionMessageParam] | None = history
         self.profile_path = profile_path
@@ -137,7 +139,7 @@ class CogniLLM:
             api_version=api_version,
             stage_config=self.stage_config,
             logger=logger,
-            initial_stage=Stage.PRE_CONTEMPLATION,
+            initial_stage=current_stage,
             messages_history=history,
         )
 
@@ -215,7 +217,6 @@ class CogniLLM:
         stage_info = self.stage_manager.get_stage_info()
         prompt = self.prompt_manager.get_message_prompt(user_message, stage_info)
         response, tokens_used = self.ai_client.send_message(prompt)
-
         self.stage_manager.handle_message_add(user_message, response)
 
         # Clean up the response to minimize context length;
@@ -294,3 +295,13 @@ class CogniLLM:
             if self.summary_enabled
             else None
         )
+
+    def get_current_stage(self) -> Stage:
+        """
+        Get the current stage.
+
+        Returns:
+            Stage: The current stage.
+        """
+
+        return self.stage_manager.current_stage

@@ -297,7 +297,7 @@ class Client:
             self._handle_api_error(
                 Exception("Validation failed"), "Response validation"
             )
-            raise
+            raise Exception("Validation failed")
         except Exception as e:
             # Handle any other unexpected errors
             self._handle_api_error(e, "Chat completion")
