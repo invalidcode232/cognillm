@@ -3,7 +3,6 @@ from openai import AzureOpenAI
 from .memory.summary import SummaryBasedMemory
 from .memory.prompt_handle import generate_summary_prompt
 import logging
-import json
 
 
 class CompletionConfig:
@@ -274,7 +273,9 @@ class Client:
         # Prepare the prompt based on summary settings
         prompt = self._prepare_prompt()
 
-        self.logger and self.logger.debug(f"Message history length: {len(self.chat_prompt)}, prompt length: {len(prompt)}")
+        self.logger and self.logger.debug(
+            f"Message history length: {len(self.chat_prompt)}, prompt length: {len(prompt)}"
+        )
 
         try:
             # Send the conversation to Azure OpenAI and get the completion
