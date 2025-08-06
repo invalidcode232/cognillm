@@ -107,6 +107,8 @@ class Evaluator:
             "history": history,
         }
 
+        self.logger.debug(f"Evaluating objective completion, message history length: {len(eval_obj['history'])}")
+
         try:
             eval_obj = json.dumps(eval_obj)
         except json.JSONDecodeError:
@@ -119,8 +121,6 @@ class Evaluator:
             raise Exception(
                 f"Unknown error converting objective or history to string: {e}"
             )
-
-        self.logger.debug(f"Evaluating objective completion: {eval_obj}")
 
         ai_client = self.ai_clients[EvaluationMethods.OBJECTIVE_COMPLETION]
         response, _ = ai_client.send_message(eval_obj)

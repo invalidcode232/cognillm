@@ -91,21 +91,22 @@ class CogniLLM:
             summary_temp_history_list (list[ChatCompletionMessageParam] | None): Temporary history list for summaries
             summary_list (list[str] | None): List of summaries generated so far
         """
-        print("Attempting to initialize CogniLLM", flush=True)
         self.history: list[ChatCompletionMessageParam] | None = history
         self.profile_path = profile_path
         self.summary_enabled: bool = summary_enabled
 
         # Initialize PromptManager
-        print("Attempting to initialize PromptManager", flush=True)
         self.prompt_manager: PromptManager = PromptManager(
             profile_path=profile_path,
         )
-        print("Prompt manager initialized successfully", flush=True)
         self.base_prompt: str = self.prompt_manager.get_base_prompt()
 
         logger.debug("Base prompt retrieved successfully")
-        print("Base prompt retrieved successfully", flush=True)
+
+        if history is not None:
+            logger.debug(f"History length: {len(history)}")
+        else:
+            logger.debug("No history provided")
 
         # Initialize the AI Client
         self.ai_client: Client = Client(
@@ -137,6 +138,7 @@ class CogniLLM:
             stage_config=self.stage_config,
             logger=logger,
             initial_stage=Stage.PRE_CONTEMPLATION,
+            messages_history=history,
         )
 
         logger.info(f"Initialized <CogniLLM> successfully | Deployment: {deployment}")

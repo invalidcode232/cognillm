@@ -151,7 +151,6 @@ class PromptManager:
                 with open(os.path.join(profile_path, file_name), "r") as f:
                     profile_data[file_name] = f.read()
             else:
-                print(f"File {file_name} not found in {profile_path}", flush=True)
                 raise FileNotFoundError(f"File {file_name} not found in {profile_path}")
 
         # Read base AI prompt contents
@@ -159,7 +158,6 @@ class PromptManager:
             with open(PROMPT_PATH, "r") as f:
                 contents = f.read()
         else:
-            print(f"Prompt path not found in {PROMPT_PATH}", flush=True)
             raise FileNotFoundError(f"File {PROMPT_PATH} not found")
 
         # 1) Process profile.yaml --

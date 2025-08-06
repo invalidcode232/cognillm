@@ -136,7 +136,7 @@ class StageManager:
             # Move to next pair
             i += 2
 
-        self.logger.info(
+        self.logger.debug(
             f"Processed existing history: {len(history)} total messages into {len(stage_history)} stages"
         )
 
@@ -151,7 +151,7 @@ class StageManager:
         logger: logging.Logger,
         stage_config: StageConfig,
         initial_stage: Stage = Stage.PRE_CONTEMPLATION,
-        stage_history: dict[Stage, list[ChatCompletionMessageParam]] | None = None,
+        messages_history: dict[Stage, list[ChatCompletionMessageParam]] | None = None,
     ):
         """
         Initializes the stage manager.
@@ -164,7 +164,7 @@ class StageManager:
             logger (logging.Logger): The logger to use for logging.
             stage_config (StageConfig): The stage config mapping stages to their evaluation configurations.
             initial_stage (Stage): The initial stage.
-            message_index (int): The index of the first message, defaults to 0.
+            messages_history (dict[Stage, list[ChatCompletionMessageParam]]): The stage history.
         """
 
         self.stage_config = stage_config
@@ -198,18 +198,18 @@ class StageManager:
             logger=logger,
         )
 
-        if stage_history is None:
+        if messages_history is None:
             # Stage tracking
             self.stage_history = {initial_stage: []}
         else:
-            self.logger.info(
-                f"Existing history found with length {len(stage_history)} messages"
+            self.logger.debug(
+                f"Existing history found with length {len(messages_history)} messages"
             )
 
             processed_history, last_stage = self._process_existing_history(
-                stage_history
+                messages_history
             )
-            self.logger.info(f"Processed history with length: {len(processed_history)}")
+            self.logger.debug(f"Processed history with length: {len(processed_history)}")
             self.stage_history = processed_history
 
             # If we have a valid last stage from history, update current_stage

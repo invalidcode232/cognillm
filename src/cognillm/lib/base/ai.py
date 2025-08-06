@@ -274,7 +274,7 @@ class Client:
         # Prepare the prompt based on summary settings
         prompt = self._prepare_prompt()
 
-        # self.logger and self.logger.debug(f"Prompt:\n {json.dumps(prompt, indent=2)}")
+        self.logger and self.logger.debug(f"Message history length: {len(self.chat_prompt)}, prompt length: {len(prompt)}")
 
         try:
             # Send the conversation to Azure OpenAI and get the completion
